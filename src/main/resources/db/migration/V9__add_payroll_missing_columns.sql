@@ -1,0 +1,7 @@
+-- Add missing columns to payroll table (V9 was rolled back/removed)
+ALTER TABLE payroll
+ADD COLUMN IF NOT EXISTS daily_wage NUMERIC(10,2) DEFAULT 0,
+ADD COLUMN IF NOT EXISTS present_days INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS doubled_days INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS absent_days INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS deductions NUMERIC(12,2) DEFAULT 0;

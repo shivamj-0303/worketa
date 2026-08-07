@@ -1,0 +1,702 @@
+{
+  "info": {
+    "_postman_id": "worketa-tms-collection",
+    "name": "WORKETA Transport Management System",
+    "description": "Complete API collection for testing WORKETA TMS backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health & Info",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/health",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "health"]
+            },
+            "description": "Check if the service is healthy and running"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Organisation & Auth",
+      "item": [
+        {
+          "name": "Register Organisation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"ABC Transport Company\",\n  \"email\": \"admin@abctransport.com\",\n  \"phone\": \"+91-9999-999-999\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/organisations/register",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "organisations", "register"]
+            },
+            "description": "Register a new organisation with default admin user"
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@abctransport.com\",\n  \"password\": \"TempPassword123!\",\n  \"organisationId\": \"{{ORG_ID}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/login",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login and get access token and refresh token"
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{REFRESH_TOKEN}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/refresh",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Get a new access token using refresh token"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"operator@abctransport.com\",\n  \"password\": \"SecurePassword123!\",\n  \"fullName\": \"John Operator\",\n  \"roleId\": \"{{ADMIN_ROLE_ID}}\",\n  \"organisationId\": \"{{ORG_ID}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/users",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "users"]
+            }
+          }
+        },
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/users",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "users"]
+            }
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/users/{{USER_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "users", "{{USER_ID}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Employees",
+      "item": [
+        {
+          "name": "Create Employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeCode\": \"EMP001\",\n  \"fullName\": \"Rajesh Kumar\",\n  \"type\": \"DRIVER\",\n  \"joiningDate\": \"2026-01-15\",\n  \"organisationId\": \"{{ORG_ID}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/employees",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "employees"]
+            }
+          }
+        },
+        {
+          "name": "Get All Employees",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/employees",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "employees"]
+            }
+          }
+        },
+        {
+          "name": "Get Employee by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/employees/{{EMPLOYEE_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "employees", "{{EMPLOYEE_ID}}"]
+            }
+          }
+        },
+        {
+          "name": "Mark Employee Inactive",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leavingDate\": \"2026-05-31\",\n  \"organisationId\": \"{{ORG_ID}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/employees/{{EMPLOYEE_ID}}/mark-inactive",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "employees", "{{EMPLOYEE_ID}}", "mark-inactive"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Vehicles",
+      "item": [
+        {
+          "name": "Create Vehicle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleNumber\": \"DL-01-AB-1234\",\n  \"type\": \"TRUCK\",\n  \"capacity\": 15000,\n  \"organisationId\": \"{{ORG_ID}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/vehicles",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "vehicles"]
+            }
+          }
+        },
+        {
+          "name": "Get All Vehicles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/vehicles",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "vehicles"]
+            }
+          }
+        },
+        {
+          "name": "Get Vehicle by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/vehicles/{{VEHICLE_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "vehicles", "{{VEHICLE_ID}}"]
+            }
+          }
+        },
+        {
+          "name": "Mark Vehicle Inactive",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organisationId\": \"{{ORG_ID}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/vehicles/{{VEHICLE_ID}}/mark-inactive",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "vehicles", "{{VEHICLE_ID}}", "mark-inactive"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Companies",
+      "item": [
+        {
+          "name": "Create Company",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Walmart Logistics\",\n  \"contactPerson\": \"Amit Sharma\",\n  \"phone\": \"+91-8888-777-666\",\n  \"email\": \"contact@walmart-logistics.com\",\n  \"address\": \"123 Business Park, New Delhi\",\n  \"organisationId\": \"{{ORG_ID}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/companies",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "companies"]
+            }
+          }
+        },
+        {
+          "name": "Get All Companies",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/companies",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "companies"]
+            }
+          }
+        },
+        {
+          "name": "Get Company by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/companies/{{COMPANY_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "companies", "{{COMPANY_ID}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Company",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Walmart Logistics Updated\",\n  \"contactPerson\": \"Amit Sharma\",\n  \"phone\": \"+91-8888-777-666\",\n  \"email\": \"contact@walmart-logistics.com\",\n  \"address\": \"456 Tech Park, Bangalore\",\n  \"organisationId\": \"{{ORG_ID}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/companies/{{COMPANY_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "companies", "{{COMPANY_ID}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Company",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/companies/{{COMPANY_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "companies", "{{COMPANY_ID}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Trips",
+      "item": [
+        {
+          "name": "Create Trip",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleId\": \"{{VEHICLE_ID}}\",\n  \"driverId\": \"{{DRIVER_ID}}\",\n  \"assistantId\": \"{{ASSISTANT_ID}}\",\n  \"companyId\": \"{{COMPANY_ID}}\",\n  \"route\": \"Delhi to Jaipur\",\n  \"tripDate\": \"2026-05-25\",\n  \"startTime\": \"09:00:00\",\n  \"endTime\": \"15:30:00\",\n  \"organisationId\": \"{{ORG_ID}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/trips",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "trips"]
+            }
+          }
+        },
+        {
+          "name": "Get All Trips",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/trips",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "trips"]
+            }
+          }
+        },
+        {
+          "name": "Get Trip by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/trips/{{TRIP_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "trips", "{{TRIP_ID}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attendance",
+      "item": [
+        {
+          "name": "Mark Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{EMPLOYEE_ID}}\",\n  \"attendanceDate\": \"2026-05-22\",\n  \"present\": true,\n  \"organisationId\": \"{{ORG_ID}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/attendance",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "attendance"]
+            }
+          }
+        },
+        {
+          "name": "Get All Attendance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/attendance",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "attendance"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Advances",
+      "item": [
+        {
+          "name": "Create Advance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{EMPLOYEE_ID}}\",\n  \"amount\": 5000,\n  \"advanceDate\": \"2026-05-22\",\n  \"note\": \"Salary advance for May\",\n  \"organisationId\": \"{{ORG_ID}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/advances",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "advances"]
+            }
+          }
+        },
+        {
+          "name": "Get All Advances",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/advances",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "advances"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payroll",
+      "item": [
+        {
+          "name": "Create Payroll",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{EMPLOYEE_ID}}\",\n  \"month\": \"2026-05\",\n  \"baseSalary\": 25000,\n  \"advances\": 5000,\n  \"remarks\": \"May 2026 payroll settlement\",\n  \"organisationId\": \"{{ORG_ID}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/payroll",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "payroll"]
+            }
+          }
+        },
+        {
+          "name": "Get All Payroll",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ACCESS_TOKEN}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/api/payroll",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "payroll"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "BASE_URL",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "ACCESS_TOKEN",
+      "value": ""
+    },
+    {
+      "key": "REFRESH_TOKEN",
+      "value": ""
+    },
+    {
+      "key": "ORG_ID",
+      "value": ""
+    },
+    {
+      "key": "USER_ID",
+      "value": ""
+    },
+    {
+      "key": "EMPLOYEE_ID",
+      "value": ""
+    },
+    {
+      "key": "VEHICLE_ID",
+      "value": ""
+    },
+    {
+      "key": "COMPANY_ID",
+      "value": ""
+    },
+    {
+      "key": "TRIP_ID",
+      "value": ""
+    },
+    {
+      "key": "ADMIN_ROLE_ID",
+      "value": ""
+    },
+    {
+      "key": "DRIVER_ID",
+      "value": ""
+    },
+    {
+      "key": "ASSISTANT_ID",
+      "value": ""
+    }
+  ]
+}
