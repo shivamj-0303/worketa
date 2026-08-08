@@ -1,118 +1,96 @@
 spring:
   application:
     name: worketa
-  
+
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/worketa}
-    username: ${DB_USER:postgres}
-    password: ${DB_PASS:postgres}
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASS}
     driver-class-name: org.postgresql.Driver
+
     hikari:
-      maximum-pool-size: ${DB_POOL_SIZE:20}
-      minimum-idle: ${DB_MIN_IDLE:5}
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      minimum-idle: ${DB_MIN_IDLE:2}
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
       auto-commit: true
-  
+
   jpa:
     hibernate:
-      ddl-auto: validate  # CRITICAL: Use validate in production, never update/create
+      ddl-auto: validate
     properties:
       hibernate:
         jdbc:
           lob:
             non_contextual_creation: true
-        format_sql: false  # Disable SQL formatting in production
-    show-sql: false  # CRITICAL: Never show SQL in production
-    open-in-view: false  # Disable OSIV - use lazy loading explicitly
-  
+        format_sql: false
+    show-sql: false
+    open-in-view: false
+
   flyway:
     enabled: true
     locations: classpath:db/migration
-    baseline-on-migrate: true
-  
-  # Security config (NOT for JWT secret - use env vars)
-  security:
-    user:
-      name: notused
-      password: notused
-  autoconfigure:
-    exclude: org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
-  
-  # Serialization safety
-  serialization:
-    write-dates-as-timestamps: false
-  
+    baseline-on-migrate: false
+    validate-on-migrate: true
+
   jackson:
     default-property-inclusion: non_null
     serialization:
       write-dates-as-timestamps: false
-      indent-output: false
+    deserialization:
+      fail-on-unknown-properties: false
 
-# JWT configuration - MUST override with env vars in production
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
 security:
   jwt:
-    secret: ${JWT_SECRET:change-me-to-very-long-random-string-in-production}
+    secret: ${JWT_SECRET}
     access-token-expiration-ms: ${JWT_ACCESS_EXPIRATION:900000}
     refresh-token-expiration-ms: ${JWT_REFRESH_EXPIRATION:604800000}
 
-# Actuator - expose only health and metrics
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
+  compression:
+    enabled: true
+    min-response-size: 1024
+
+  tomcat:
+    threads:
+      max: 100
+      min-spare: 10
+    accept-count: 100
+    max-connections: 10000
+    connection-timeout: 20000
+
 management:
   endpoints:
     web:
       exposure:
         include: health,metrics,prometheus
+
   endpoint:
     health:
-      show-details: when-authorized
+      show-details: never
       probes:
         enabled: true
+
   health:
-    livenessState:
+    livenessstate:
       enabled: true
-    readinessState:
+    readinessstate:
       enabled: true
-  metrics:
-    distribution:
-      percentiles-histogram:
-        http.server.requests: true
 
-# Server config
-server:
-  servlet:
-    context-path: /
-  compression:
-    enabled: true
-    min-response-size: 1024
-  tomcat:
-    threads:
-      max: 200
-      min-spare: 10
-    accept-count: 100
-    max-connections: 10000
-    connection-timeout: 20000
-  port: ${SERVER_PORT:8080}
-  shutdown: graceful  # Enable graceful shutdown
-  
-spring.lifecycle.timeout-per-shutdown-phase: 30s  # 30 seconds for graceful shutdown
-
-# Logging configuration
 logging:
   level:
     root: INFO
     com.worketa: INFO
     org.springframework.web: INFO
     org.springframework.security: INFO
-    org.hibernate.SQL: OFF  # Never log SQL in production
+    org.hibernate.SQL: OFF
     org.hibernate.type.descriptor.sql.BasicBinder: OFF
+
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-  file:
-    name: ${LOG_DIR:/var/log/worketa}/worketa.log
-  logback:
-    rollingpolicy:
-      max-file-size: 100MB
-      max-history: 30
-      total-size-cap: 10GB
