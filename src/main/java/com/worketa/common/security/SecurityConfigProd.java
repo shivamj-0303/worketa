@@ -59,7 +59,7 @@ public class SecurityConfigProd {
         config.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
                 "http://localhost:5173",
-                "https://app.worketa.local"
+                "https://worketa-frontend-web.vercel.app"
         ));
 
         config.setAllowedMethods(Arrays.asList(
