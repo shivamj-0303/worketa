@@ -1,5 +1,6 @@
 package com.worketa.modules.organisation.service;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,44 +16,50 @@ public class OrganisationService {
 
     private final OrganisationRepository orgRepo;
     private final UserRepository userRepo;
-    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
-    private final com.worketa.modules.users.repository.RoleRepository roleRepo;
+    private final PasswordEncoder passwordEncoder;
 
-    public OrganisationService(OrganisationRepository orgRepo,
-                               UserRepository userRepo,
-                               org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
-                               com.worketa.modules.users.repository.RoleRepository roleRepo) {
+    public OrganisationService(
+            OrganisationRepository orgRepo,
+            UserRepository userRepo,
+            PasswordEncoder passwordEncoder
+    ) {
         this.orgRepo = orgRepo;
         this.userRepo = userRepo;
         this.passwordEncoder = passwordEncoder;
-        this.roleRepo = roleRepo;
     }
 
     @Transactional
     public Organisation register(OrganisationCreateRequest req) {
+
         if (orgRepo.existsByEmail(req.getEmail())) {
-            throw new ApiException("Organisation with this email already exists");
+            throw new ApiException(
+                    "Organisation with this email already exists"
+            );
         }
 
+        // Create organisation
         Organisation org = new Organisation();
         org.setName(req.getName());
         org.setEmail(req.getEmail());
         org.setPhone(req.getPhone());
+
         org = orgRepo.save(org);
 
-        // create default admin user
+        // Create default admin user
         User admin = new User();
+
         admin.setOrganisationId(org.getId());
         admin.setFullName(req.getOwnerName());
         admin.setEmail(req.getEmail());
-        admin.setPassword(passwordEncoder.encode(req.getPassword()));
-        var adminRole = roleRepo.findByName("ADMIN").orElseGet(() -> {
-            var r = new com.worketa.modules.users.entity.Role();
-            r.setName("ADMIN");
-            r.setDescription("Organisation admin");
-            return roleRepo.save(r);
-        });
-        admin.setRoles(java.util.Set.of(adminRole));
+        admin.setPassword(
+                passwordEncoder.encode(req.getPassword())
+        );
+
+        // Roles is now a simple String column
+        admin.setRoles("ADMIN");
+
+        admin.setActive(true);
+
         userRepo.save(admin);
 
         return org;

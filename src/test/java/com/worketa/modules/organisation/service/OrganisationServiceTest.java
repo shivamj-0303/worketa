@@ -1,11 +1,8 @@
 package com.worketa.modules.organisation.service;
 
-import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,9 +21,7 @@ import com.worketa.common.exception.ApiException;
 import com.worketa.modules.organisation.dto.OrganisationCreateRequest;
 import com.worketa.modules.organisation.entity.Organisation;
 import com.worketa.modules.organisation.repository.OrganisationRepository;
-import com.worketa.modules.users.entity.Role;
 import com.worketa.modules.users.entity.User;
-import com.worketa.modules.users.repository.RoleRepository;
 import com.worketa.modules.users.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,9 +35,6 @@ class OrganisationServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
-
-    @Mock
-    private RoleRepository roleRepo;
 
     @InjectMocks
     private OrganisationService service;
@@ -61,37 +53,57 @@ class OrganisationServiceTest {
 
     @Test
     void testRegisterOrganisationSuccess() {
-        when(orgRepo.existsByEmail(validRequest.getEmail())).thenReturn(false);
-        when(orgRepo.save(any(Organisation.class))).thenAnswer(invocation -> {
-            Organisation org = invocation.getArgument(0);
-            org.setId(java.util.UUID.randomUUID());
-            return org;
-        });
-        when(passwordEncoder.encode(anyString())).thenReturn("hashed");
-        
-        Role adminRole = new Role();
-        adminRole.setName("ADMIN");
-        when(roleRepo.findByName("ADMIN")).thenReturn(Optional.of(adminRole));
-        when(userRepo.save(any(User.class))).thenReturn(new User());
+
+        when(orgRepo.existsByEmail(validRequest.getEmail()))
+                .thenReturn(false);
+
+        when(orgRepo.save(any(Organisation.class)))
+                .thenAnswer(invocation -> {
+                    Organisation org = invocation.getArgument(0);
+                    org.setId(java.util.UUID.randomUUID());
+                    return org;
+                });
+
+        when(passwordEncoder.encode(anyString()))
+                .thenReturn("hashed");
+
+        when(userRepo.save(any(User.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         Organisation result = service.register(validRequest);
 
         assertNotNull(result);
         assertEquals(validRequest.getName(), result.getName());
-        verify(orgRepo, times(1)).save(any(Organisation.class));
-        verify(userRepo, times(1)).save(any(User.class));
+        assertEquals(validRequest.getEmail(), result.getEmail());
+
+        verify(orgRepo, times(1))
+                .save(any(Organisation.class));
+
+        verify(userRepo, times(1))
+                .save(any(User.class));
+
+        verify(passwordEncoder, times(1))
+                .encode(validRequest.getPassword());
     }
 
     @Test
     void testRegisterOrganisationDuplicateEmail() {
-        when(orgRepo.existsByEmail(validRequest.getEmail())).thenReturn(true);
 
-        try {
-            service.register(validRequest);
-            fail("Should throw ApiException");
-        } catch (ApiException e) {
-            assertTrue(true);
-        }
-        verify(orgRepo, never()).save(any());
+        when(orgRepo.existsByEmail(validRequest.getEmail()))
+                .thenReturn(true);
+
+        assertThrows(
+                ApiException.class,
+                () -> service.register(validRequest)
+        );
+
+        verify(orgRepo, never())
+                .save(any(Organisation.class));
+
+        verify(userRepo, never())
+                .save(any(User.class));
+
+        verify(passwordEncoder, never())
+                .encode(anyString());
     }
 }

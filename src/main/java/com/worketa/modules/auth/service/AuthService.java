@@ -24,7 +24,12 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenRepository refreshTokenRepo;
 
-    public AuthService(UserRepository userRepo, JwtTokenProvider jwt, PasswordEncoder passwordEncoder, RefreshTokenRepository refreshTokenRepo) {
+    public AuthService(
+            UserRepository userRepo,
+            JwtTokenProvider jwt,
+            PasswordEncoder passwordEncoder,
+            RefreshTokenRepository refreshTokenRepo
+    ) {
         this.userRepo = userRepo;
         this.jwt = jwt;
         this.passwordEncoder = passwordEncoder;
@@ -45,13 +50,18 @@ public class AuthService {
             throw new ApiException("Invalid credentials");
         }
 
-        var roleNames = user.getRoles()
-                .stream()
-                .map(r -> r.getName())
-                .toList();
+        /*
+         * roles is now a simple String column in users table.
+         * Example: ADMIN, MANAGER, EMPLOYEE
+         */
+        String role = user.getRoles();
+
+        if (role == null || role.isBlank()) {
+            throw new ApiException("User role is not configured");
+        }
 
         var claims = Map.<String, Object>of(
-                "roles", String.join(",", roleNames),
+                "roles", role,
                 "organisationId", user.getOrganisationId().toString()
         );
 
@@ -63,7 +73,9 @@ public class AuthService {
         RefreshToken refreshToken = new RefreshToken();
         refreshToken.setUser(user);
         refreshToken.setToken(UUID.randomUUID().toString());
-        refreshToken.setExpiresAt(OffsetDateTime.now().plusDays(7));
+        refreshToken.setExpiresAt(
+                OffsetDateTime.now().plusDays(7)
+        );
 
         refreshTokenRepo.save(refreshToken);
 
@@ -75,15 +87,34 @@ public class AuthService {
 
     @Transactional
     public String refreshAccessToken(String refreshTokenStr) {
+
         RefreshToken refreshToken = refreshTokenRepo.findByToken(refreshTokenStr)
                 .orElseThrow(() -> new ApiException("Invalid refresh token"));
-        
-        if (refreshToken.isRevoked()) throw new ApiException("Refresh token revoked");
-        if (OffsetDateTime.now().isAfter(refreshToken.getExpiresAt())) throw new ApiException("Refresh token expired");
-        
+
+        if (refreshToken.isRevoked()) {
+            throw new ApiException("Refresh token revoked");
+        }
+
+        if (OffsetDateTime.now().isAfter(refreshToken.getExpiresAt())) {
+            throw new ApiException("Refresh token expired");
+        }
+
         User user = refreshToken.getUser();
-        var roleNames = user.getRoles().stream().map(r -> r.getName()).toList();
-        var claims = Map.<String, Object>of("roles", String.join(",", roleNames), "organisationId", user.getOrganisationId().toString());
-        return jwt.createAccessToken(user.getId().toString(), claims);
+
+        String role = user.getRoles();
+
+        if (role == null || role.isBlank()) {
+            throw new ApiException("User role is not configured");
+        }
+
+        var claims = Map.<String, Object>of(
+                "roles", role,
+                "organisationId", user.getOrganisationId().toString()
+        );
+
+        return jwt.createAccessToken(
+                user.getId().toString(),
+                claims
+        );
     }
 }

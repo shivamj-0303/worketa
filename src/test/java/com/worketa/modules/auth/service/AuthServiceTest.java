@@ -2,7 +2,6 @@ package com.worketa.modules.auth.service;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -27,7 +26,6 @@ import com.worketa.common.exception.ApiException;
 import com.worketa.common.security.JwtTokenProvider;
 import com.worketa.modules.auth.dto.LoginRequest;
 import com.worketa.modules.auth.repository.RefreshTokenRepository;
-import com.worketa.modules.users.entity.Role;
 import com.worketa.modules.users.entity.User;
 import com.worketa.modules.users.repository.UserRepository;
 
@@ -54,19 +52,17 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
+
         UUID orgId = UUID.randomUUID();
-        
+
         testUser = new User();
         testUser.setId(UUID.randomUUID());
         testUser.setEmail("user@test.com");
         testUser.setPassword("hashedpassword");
         testUser.setOrganisationId(orgId);
+        testUser.setRoles("ADMIN");
         testUser.setActive(true);
-        
-        Role role = new Role();
-        role.setName("ADMIN");
-        testUser.setRoles(Set.of(role));
-        
+
         loginRequest = new LoginRequest();
         loginRequest.setEmail("user@test.com");
         loginRequest.setPassword("rawpassword");
@@ -75,34 +71,98 @@ class AuthServiceTest {
 
     @Test
     void testLoginSuccess() {
+
         when(userRepo.findByEmail(eq("user@test.com")))
                 .thenReturn(Optional.of(testUser));
-        when(passwordEncoder.matches("rawpassword", "hashedpassword")).thenReturn(true);
-        when(jwt.createAccessToken(anyString(), anyMap())).thenReturn("access_token");
-        when(refreshTokenRepo.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(passwordEncoder.matches(
+                "rawpassword",
+                "hashedpassword"
+        )).thenReturn(true);
+
+        when(jwt.createAccessToken(
+                anyString(),
+                anyMap()
+        )).thenReturn("access_token");
+
+        when(refreshTokenRepo.save(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         Map<String, String> result = service.login(loginRequest);
 
         assertNotNull(result);
         assertTrue(result.containsKey("accessToken"));
         assertTrue(result.containsKey("refreshToken"));
-        verify(jwt, times(1)).createAccessToken(anyString(), anyMap());
+
+        verify(jwt, times(1))
+                .createAccessToken(anyString(), anyMap());
+
+        verify(passwordEncoder, times(1))
+                .matches("rawpassword", "hashedpassword");
+
+        verify(refreshTokenRepo, times(1))
+                .save(any());
     }
 
     @Test
     void testLoginInvalidCredentials() {
+
         when(userRepo.findByEmail(eq("user@test.com")))
                 .thenReturn(Optional.empty());
 
-        assertThrows(ApiException.class, () -> service.login(loginRequest));
+        assertThrows(
+                ApiException.class,
+                () -> service.login(loginRequest)
+        );
     }
 
     @Test
     void testLoginInactiveUser() {
+
         testUser.setActive(false);
+
         when(userRepo.findByEmail(eq("user@test.com")))
                 .thenReturn(Optional.of(testUser));
 
-        assertThrows(ApiException.class, () -> service.login(loginRequest));
+        assertThrows(
+                ApiException.class,
+                () -> service.login(loginRequest)
+        );
+    }
+
+    @Test
+    void testLoginWrongPassword() {
+
+        when(userRepo.findByEmail(eq("user@test.com")))
+                .thenReturn(Optional.of(testUser));
+
+        when(passwordEncoder.matches(
+                "rawpassword",
+                "hashedpassword"
+        )).thenReturn(false);
+
+        assertThrows(
+                ApiException.class,
+                () -> service.login(loginRequest)
+        );
+    }
+
+    @Test
+    void testLoginWithoutRole() {
+
+        testUser.setRoles(null);
+
+        when(userRepo.findByEmail(eq("user@test.com")))
+                .thenReturn(Optional.of(testUser));
+
+        when(passwordEncoder.matches(
+                "rawpassword",
+                "hashedpassword"
+        )).thenReturn(true);
+
+        assertThrows(
+                ApiException.class,
+                () -> service.login(loginRequest)
+        );
     }
 }
