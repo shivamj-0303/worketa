@@ -76,7 +76,8 @@ public class SecurityConfigProd {
                 HttpHeaders.CONTENT_TYPE,
                 HttpHeaders.ACCEPT,
                 "X-Requested-With",
-                "X-Correlation-ID"
+                "X-Correlation-ID",
+                "X-Request-ID"
         ));
 
         config.setExposedHeaders(Arrays.asList(
