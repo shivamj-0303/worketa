@@ -65,4 +65,30 @@ public class UserService {
         return repo.findById(id)
                 .orElseThrow(() -> new ApiException("User not found"));
     }
+
+    @Transactional
+    public void changePassword(UUID userId, String currentPassword, String newPassword) {
+        if (userId == null) {
+            throw new ApiException("User id is required");
+        }
+        if (currentPassword == null || currentPassword.isBlank()) {
+            throw new ApiException("Current password is required");
+        }
+        if (newPassword == null || newPassword.isBlank()) {
+            throw new ApiException("New password is required");
+        }
+        if (newPassword.length() < 6) {
+            throw new ApiException("New password must be at least 6 characters long");
+        }
+
+        User user = repo.findById(userId)
+                .orElseThrow(() -> new ApiException("User not found"));
+
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new ApiException("Current password is incorrect");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        repo.save(user);
+    }
 }

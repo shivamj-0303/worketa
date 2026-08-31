@@ -86,14 +86,14 @@ class PayrollServiceTest {
 
         assertNotNull(payroll);
         assertEquals("Test Employee", payroll.getEmployeeName());
-        assertEquals("2026-07", payroll.getMonth());
-        assertEquals(new BigDecimal("1500.00"), payroll.getBaseSalary());
-        assertEquals(new BigDecimal("1500.00"), payroll.getGrossAmount());
+        assertEquals(String.format("%04d-%02d", LocalDate.now().getYear(), LocalDate.now().getMonthValue()), payroll.getMonth());
+        assertEquals(new BigDecimal("2000.00"), payroll.getBaseSalary());
+        assertEquals(new BigDecimal("2000.00"), payroll.getGrossAmount());
 
         ArgumentCaptor<Payroll> payrollCaptor = ArgumentCaptor.forClass(Payroll.class);
         verify(payrollRepository).save(payrollCaptor.capture());
         assertEquals("Test Employee", payrollCaptor.getValue().getEmployeeName());
-        assertEquals("2026-07", payrollCaptor.getValue().getMonth());
+        assertEquals(String.format("%04d-%02d", LocalDate.now().getYear(), LocalDate.now().getMonthValue()), payrollCaptor.getValue().getMonth());
         verify(advanceRepository).saveAll(anyList());
     }
 

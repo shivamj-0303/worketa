@@ -13,6 +13,8 @@ import com.worketa.common.security.JwtTokenProvider;
 import com.worketa.modules.auth.dto.LoginRequest;
 import com.worketa.modules.auth.entity.RefreshToken;
 import com.worketa.modules.auth.repository.RefreshTokenRepository;
+import com.worketa.modules.employees.entity.Employee;
+import com.worketa.modules.employees.repository.EmployeeRepository;
 import com.worketa.modules.users.entity.User;
 import com.worketa.modules.users.repository.UserRepository;
 
@@ -20,17 +22,20 @@ import com.worketa.modules.users.repository.UserRepository;
 public class AuthService {
 
     private final UserRepository userRepo;
+    private final EmployeeRepository employeeRepo;
     private final JwtTokenProvider jwt;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenRepository refreshTokenRepo;
 
     public AuthService(
             UserRepository userRepo,
+            EmployeeRepository employeeRepo,
             JwtTokenProvider jwt,
             PasswordEncoder passwordEncoder,
             RefreshTokenRepository refreshTokenRepo
     ) {
         this.userRepo = userRepo;
+        this.employeeRepo = employeeRepo;
         this.jwt = jwt;
         this.passwordEncoder = passwordEncoder;
         this.refreshTokenRepo = refreshTokenRepo;
@@ -60,10 +65,15 @@ public class AuthService {
             throw new ApiException("User role is not configured");
         }
 
-        var claims = Map.<String, Object>of(
-                "roles", role,
-                "organisationId", user.getOrganisationId().toString()
-        );
+        Employee employee = employeeRepo.findByOrganisationIdAndFullName(user.getOrganisationId(), user.getFullName())
+                .orElse(null);
+
+        var claims = new java.util.HashMap<String, Object>();
+        claims.put("roles", role);
+        claims.put("organisationId", user.getOrganisationId().toString());
+        if (employee != null) {
+            claims.put("employeeId", employee.getId().toString());
+        }
 
         String accessToken = jwt.createAccessToken(
                 user.getId().toString(),
@@ -79,10 +89,15 @@ public class AuthService {
 
         refreshTokenRepo.save(refreshToken);
 
-        return Map.of(
-                "accessToken", accessToken,
-                "refreshToken", refreshToken.getToken()
-        );
+        var response = new java.util.HashMap<String, String>();
+        response.put("accessToken", accessToken);
+        response.put("refreshToken", refreshToken.getToken());
+        response.put("userId", user.getId().toString());
+        response.put("email", user.getEmail());
+        if (employee != null) {
+            response.put("employeeId", employee.getId().toString());
+        }
+        return response;
     }
 
     @Transactional
@@ -107,10 +122,15 @@ public class AuthService {
             throw new ApiException("User role is not configured");
         }
 
-        var claims = Map.<String, Object>of(
-                "roles", role,
-                "organisationId", user.getOrganisationId().toString()
-        );
+        Employee employee = employeeRepo.findByOrganisationIdAndFullName(user.getOrganisationId(), user.getFullName())
+                .orElse(null);
+
+        var claims = new java.util.HashMap<String, Object>();
+        claims.put("roles", role);
+        claims.put("organisationId", user.getOrganisationId().toString());
+        if (employee != null) {
+            claims.put("employeeId", employee.getId().toString());
+        }
 
         return jwt.createAccessToken(
                 user.getId().toString(),

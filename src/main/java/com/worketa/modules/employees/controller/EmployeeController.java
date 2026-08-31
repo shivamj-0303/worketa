@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.worketa.common.response.ApiResponse;
+import com.worketa.modules.employees.dto.EmployeeCreateRequest;
+import com.worketa.modules.employees.dto.EmployeeCreateResponse;
 import com.worketa.modules.employees.entity.Employee;
 import com.worketa.modules.employees.service.EmployeeService;
 
@@ -30,9 +32,9 @@ public class EmployeeController {
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<Employee>> create(@RequestBody Employee emp) {
-        Employee employee = service.create(emp);
-        return ResponseEntity.ok(ApiResponse.ok("Employee created", employee));
+    public ResponseEntity<ApiResponse<EmployeeCreateResponse>> create(@RequestBody EmployeeCreateRequest request) {
+        EmployeeCreateResponse response = service.create(request);
+        return ResponseEntity.ok(ApiResponse.ok("Employee created", response));
     }
 
     @PutMapping("/{id}")

@@ -49,6 +49,8 @@ public class Payroll extends Auditable {
 
     private BigDecimal grossAmount = BigDecimal.ZERO;
 
+    private BigDecimal bonusAmount = BigDecimal.ZERO;
+
     private BigDecimal advanceDeduction = BigDecimal.ZERO;
 
     private BigDecimal netAmount = BigDecimal.ZERO;
@@ -163,6 +165,14 @@ public class Payroll extends Auditable {
 
     public void setGrossAmount(BigDecimal grossAmount) {
         this.grossAmount = grossAmount;
+    }
+
+    public BigDecimal getBonusAmount() {
+        return bonusAmount;
+    }
+
+    public void setBonusAmount(BigDecimal bonusAmount) {
+        this.bonusAmount = bonusAmount;
     }
 
     public BigDecimal getAdvanceDeduction() {

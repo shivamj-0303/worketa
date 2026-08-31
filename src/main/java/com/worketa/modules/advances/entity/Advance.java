@@ -4,13 +4,14 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-
 import com.worketa.common.audit.Auditable;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
@@ -35,6 +36,10 @@ public class Advance extends Auditable {
     @Column(nullable = false)
     private LocalDate advanceDate;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private AdvanceStatus status = AdvanceStatus.PENDING;
+
     private String note;
 
     private boolean settled = false;
@@ -49,8 +54,14 @@ public class Advance extends Auditable {
     public void setAmount(BigDecimal amount) { this.amount = amount; }
     public LocalDate getAdvanceDate() { return advanceDate; }
     public void setAdvanceDate(LocalDate advanceDate) { this.advanceDate = advanceDate; }
+    public AdvanceStatus getStatus() { return status; }
+    public void setStatus(AdvanceStatus status) { this.status = status; }
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }
     public boolean isSettled() { return settled; }
     public void setSettled(boolean settled) { this.settled = settled; }
+
+    public enum AdvanceStatus {
+        PENDING, APPROVED, REJECTED
+    }
 }

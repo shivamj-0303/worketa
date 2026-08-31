@@ -11,10 +11,26 @@ import com.worketa.modules.advances.entity.Advance;
 public interface AdvanceRepository extends JpaRepository<Advance, UUID> {
 
     List<Advance> findByOrganisationId(UUID organisationId);
+    List<Advance> findByOrganisationIdAndStatus(UUID organisationId, Advance.AdvanceStatus status);
 
-    List<Advance> findByEmployeeId(UUID employeeId);
+    List<Advance> findByEmployeeIdAndOrganisationId(UUID employeeId, UUID organisationId);
 
-    List<Advance> findByEmployeeIdAndSettledFalse(UUID employeeId);
+    List<Advance> findByEmployeeIdAndOrganisationIdAndSettledFalse(UUID employeeId, UUID organisationId);
+
+        List<Advance> findByEmployeeIdAndOrganisationIdAndSettledFalseAndAdvanceDateBetween(
+            UUID employeeId,
+            UUID organisationId,
+            LocalDate start,
+            LocalDate end
+        );
+
+        List<Advance> findByEmployeeIdAndOrganisationIdAndStatusAndSettledFalseAndAdvanceDateBetween(
+            UUID employeeId,
+            UUID organisationId,
+            Advance.AdvanceStatus status,
+            LocalDate start,
+            LocalDate end
+        );
 
     List<Advance> findByEmployeeIdAndSettledFalseAndAdvanceDateBetween(
             UUID employeeId,

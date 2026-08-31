@@ -15,6 +15,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.worketa.common.exception.ApiException;
 import com.worketa.common.security.OrganisationContext;
+import com.worketa.common.time.WorketaClock;
 import com.worketa.modules.advances.entity.Advance;
 import com.worketa.modules.advances.repository.AdvanceRepository;
 import com.worketa.modules.attendance.entity.Attendance;
@@ -69,7 +70,7 @@ public class PayrollService {
                         ? latestPayroll.get().getPeriodEnd().plusDays(1)
                         : employee.getJoiningDate();
 
-        LocalDate endDate = LocalDate.now();
+        LocalDate endDate = WorketaClock.businessDate();
 
         List<Attendance> attendances =
                                 attendanceRepository.findByEmployeeIdAndOrganisationIdAndAttendanceDateBetweenOrderByAttendanceDateAsc(
@@ -81,8 +82,21 @@ public class PayrollService {
         int presentDays = 0;
         int doubledDays = 0;
         int absentDays = 0;
+        int requestedPresentDays = 0;
+        int requestedDoubledDays = 0;
+        int requestedAbsentDays = 0;
 
         for (Attendance attendance : attendances) {
+                        switch (attendance.getType()) {
+                                case PRESENT -> requestedPresentDays++;
+                                case WORKED_DOUBLE -> requestedDoubledDays++;
+                                case ABSENT -> requestedAbsentDays++;
+                        }
+
+                        if (attendance.getStatus() != Attendance.AttendanceStatus.APPROVED) {
+                                continue;
+                        }
+
                         switch (attendance.getType()) {
                                 case PRESENT -> presentDays++;
                                 case WORKED_DOUBLE -> doubledDays++;
@@ -92,21 +106,34 @@ public class PayrollService {
 
         BigDecimal dailyWage = employee.getDailyWage();
 
+        BigDecimal bonusAmount = BigDecimal.valueOf(500L).multiply(BigDecimal.valueOf(doubledDays));
+
         BigDecimal grossAmount =
                 dailyWage.multiply(BigDecimal.valueOf(presentDays))
                         .add(
                                 dailyWage
                                         .multiply(BigDecimal.valueOf(2))
-                                        .multiply(BigDecimal.valueOf(doubledDays)));
+                                        .multiply(BigDecimal.valueOf(doubledDays)))
+                        .add(bonusAmount);
 
         List<Advance> advances =
                 advanceRepository
-                        .findByEmployeeIdAndSettledFalseAndAdvanceDateBetween(
+                        .findByEmployeeIdAndOrganisationIdAndStatusAndSettledFalseAndAdvanceDateBetween(
                                 employeeId,
+                                OrganisationContext.get(),
+                                Advance.AdvanceStatus.APPROVED,
                                 startDate,
                                 endDate);
 
         BigDecimal advanceDeduction = advances.stream()
+                .map(Advance::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal requestedAdvanceAmount = advanceRepository
+                .findByEmployeeIdAndOrganisationIdAndSettledFalseAndAdvanceDateBetween(
+                        employeeId, OrganisationContext.get(), startDate, endDate)
+                .stream()
+                .filter(advance -> advance.getStatus() != Advance.AdvanceStatus.REJECTED)
                 .map(Advance::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -126,10 +153,16 @@ public class PayrollService {
         response.setPresentDays(presentDays);
         response.setDoubledDays(doubledDays);
         response.setAbsentDays(absentDays);
+        response.setRequestedPresentDays(requestedPresentDays);
+        response.setRequestedDoubledDays(requestedDoubledDays);
+        response.setRequestedAbsentDays(requestedAbsentDays);
 
         response.setGrossAmount(grossAmount);
+        response.setBonusAmount(bonusAmount);
         response.setAdvanceDeduction(advanceDeduction);
         response.setNetAmount(netAmount);
+        response.setRequestedAdvanceAmount(requestedAdvanceAmount);
+        response.setRequestedBonusAmount(BigDecimal.valueOf(500L).multiply(BigDecimal.valueOf(requestedDoubledDays)));
 
         return response;
     }
@@ -158,6 +191,7 @@ public class PayrollService {
         payroll.setAbsentDays(summary.getAbsentDays());
 
         payroll.setGrossAmount(summary.getGrossAmount());
+        payroll.setBonusAmount(summary.getBonusAmount());
         payroll.setAdvanceDeduction(summary.getAdvanceDeduction());
         payroll.setNetAmount(summary.getNetAmount());
         payroll.setRemarks(buildRemarks(summary));
@@ -166,8 +200,10 @@ public class PayrollService {
 
         List<Advance> advances =
                 advanceRepository
-                        .findByEmployeeIdAndSettledFalseAndAdvanceDateBetween(
+                        .findByEmployeeIdAndOrganisationIdAndStatusAndSettledFalseAndAdvanceDateBetween(
                                 employeeId,
+                                OrganisationContext.get(),
+                                Advance.AdvanceStatus.APPROVED,
                                 summary.getPeriodStart(),
                                 summary.getPeriodEnd());
 

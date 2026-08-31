@@ -22,11 +22,20 @@ public class PayrollSummaryResponse {
 
     private int absentDays;
 
+    private int requestedPresentDays;
+    private int requestedDoubledDays;
+    private int requestedAbsentDays;
+
     private BigDecimal grossAmount;
+
+    private BigDecimal bonusAmount;
 
     private BigDecimal advanceDeduction;
 
     private BigDecimal netAmount;
+
+    private BigDecimal requestedAdvanceAmount = BigDecimal.ZERO;
+    private BigDecimal requestedBonusAmount = BigDecimal.ZERO;
 
     public UUID getEmployeeId() {
         return employeeId;
@@ -92,12 +101,27 @@ public class PayrollSummaryResponse {
         this.absentDays = absentDays;
     }
 
+    public int getRequestedPresentDays() { return requestedPresentDays; }
+    public void setRequestedPresentDays(int requestedPresentDays) { this.requestedPresentDays = requestedPresentDays; }
+    public int getRequestedDoubledDays() { return requestedDoubledDays; }
+    public void setRequestedDoubledDays(int requestedDoubledDays) { this.requestedDoubledDays = requestedDoubledDays; }
+    public int getRequestedAbsentDays() { return requestedAbsentDays; }
+    public void setRequestedAbsentDays(int requestedAbsentDays) { this.requestedAbsentDays = requestedAbsentDays; }
+
     public BigDecimal getGrossAmount() {
         return grossAmount;
     }
 
     public void setGrossAmount(BigDecimal grossAmount) {
         this.grossAmount = grossAmount;
+    }
+
+    public BigDecimal getBonusAmount() {
+        return bonusAmount;
+    }
+
+    public void setBonusAmount(BigDecimal bonusAmount) {
+        this.bonusAmount = bonusAmount;
     }
 
     public BigDecimal getAdvanceDeduction() {
@@ -115,4 +139,9 @@ public class PayrollSummaryResponse {
     public void setNetAmount(BigDecimal netAmount) {
         this.netAmount = netAmount;
     }
+
+    public BigDecimal getRequestedAdvanceAmount() { return requestedAdvanceAmount; }
+    public void setRequestedAdvanceAmount(BigDecimal requestedAdvanceAmount) { this.requestedAdvanceAmount = requestedAdvanceAmount; }
+    public BigDecimal getRequestedBonusAmount() { return requestedBonusAmount; }
+    public void setRequestedBonusAmount(BigDecimal requestedBonusAmount) { this.requestedBonusAmount = requestedBonusAmount; }
 }
