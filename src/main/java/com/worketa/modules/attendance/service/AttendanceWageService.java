@@ -11,7 +11,7 @@ import com.worketa.modules.attendance.entity.Attendance;
  * Rules:
  * - PRESENT: 1x daily wage
  * - ABSENT: 0x daily wage (no wage)
- * - WORKED_DOUBLE: 2x daily wage
+ * - WORKED_DOUBLE: normal daily wage plus a fixed double-shift allowance of 500
  */
 @Service
 public class AttendanceWageService {
@@ -31,7 +31,7 @@ public class AttendanceWageService {
         return switch (type) {
             case PRESENT -> employeeDailyWage;
             case ABSENT -> BigDecimal.ZERO;
-            case WORKED_DOUBLE -> employeeDailyWage.multiply(BigDecimal.valueOf(2));
+            case WORKED_DOUBLE -> employeeDailyWage.add(BigDecimal.valueOf(500L));
         };
     }
 
@@ -43,7 +43,7 @@ public class AttendanceWageService {
      * @return the attendance record with wageForDay set
      */
     public Attendance calculateAndSetWage(Attendance attendance, BigDecimal employeeDailyWage) {
-        BigDecimal calculatedWage = calculateWageForDay(attendance.getType(), employeeDailyWage);
+        calculateWageForDay(attendance.getType(), employeeDailyWage);
         return attendance;
     }
 }

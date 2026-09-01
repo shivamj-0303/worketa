@@ -94,6 +94,8 @@ public class AuthService {
         response.put("refreshToken", refreshToken.getToken());
         response.put("userId", user.getId().toString());
         response.put("email", user.getEmail());
+        response.put("fullName", user.getFullName());
+        response.put("role", role);
         if (employee != null) {
             response.put("employeeId", employee.getId().toString());
         }

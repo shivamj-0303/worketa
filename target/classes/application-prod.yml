@@ -15,6 +15,7 @@ spring:
       idle-timeout: 600000
       max-lifetime: 1800000
       auto-commit: true
+      connection-init-sql: SET TIME ZONE 'Asia/Kolkata'
 
   jpa:
     hibernate:

@@ -2,6 +2,7 @@ package com.worketa.common.audit;
 
 import java.time.OffsetDateTime;
 
+import com.worketa.common.time.WorketaClock;
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.PrePersist;
@@ -18,13 +19,13 @@ public abstract class Auditable {
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = OffsetDateTime.now();
+        this.createdAt = WorketaClock.now().toOffsetDateTime();
         this.updatedAt = this.createdAt;
     }
 
     @PreUpdate
     protected void onUpdate() {
-        this.updatedAt = OffsetDateTime.now();
+        this.updatedAt = WorketaClock.now().toOffsetDateTime();
     }
 
     public OffsetDateTime getCreatedAt() { return createdAt; }

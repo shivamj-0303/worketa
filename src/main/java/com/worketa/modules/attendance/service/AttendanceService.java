@@ -8,20 +8,25 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import com.worketa.common.exception.ApiException;
 import com.worketa.common.security.OrganisationContext;
 import com.worketa.common.time.WorketaClock;
 import com.worketa.modules.attendance.entity.Attendance;
 import com.worketa.modules.attendance.repository.AttendanceRepository;
+import com.worketa.modules.employees.entity.Employee;
+import com.worketa.modules.employees.repository.EmployeeRepository;
 
 @Service
 public class AttendanceService {
 
     private final AttendanceRepository repo;
+    private final EmployeeRepository employeeRepository;
 
-    public AttendanceService(AttendanceRepository repo) {
+    public AttendanceService(AttendanceRepository repo, EmployeeRepository employeeRepository) {
         this.repo = repo;
+        this.employeeRepository = employeeRepository;
     }
 
     @Transactional
@@ -36,7 +41,7 @@ public class AttendanceService {
                 attendance.getEmployeeId(), organisationId, attendance.getAttendanceDate(), attendance.getType()).isPresent()) {
             throw new ApiException("This attendance request already exists for this date");
         }
-        LocalTime currentTime = LocalTime.now();
+        LocalTime currentTime = WorketaClock.now().toLocalTime();
         boolean doubleWindowOpen = !currentTime.isBefore(LocalTime.of(17, 0))
             || currentTime.isBefore(LocalTime.of(2, 0));
         if (attendance.getType() == Attendance.AttendanceType.WORKED_DOUBLE && !doubleWindowOpen) {
@@ -44,6 +49,55 @@ public class AttendanceService {
         }
         attendance.setStatus(Attendance.AttendanceStatus.PENDING);
         return repo.save(attendance);
+    }
+
+    @Scheduled(cron = "0 0 * * * *", zone = "Asia/Kolkata")
+    @Transactional
+    public void finalizePreviousBusinessDay() {
+        LocalTime now = WorketaClock.now().toLocalTime();
+        if (now.isBefore(LocalTime.of(3, 0))) {
+            return;
+        }
+
+        LocalDate date = WorketaClock.businessDate().minusDays(1);
+        for (Employee employee : employeeRepository.findAll()) {
+            if (!employee.isActive()
+                    || employee.getJoiningDate() == null
+                    || employee.getJoiningDate().isAfter(date)
+                    || (employee.getLeavingDate() != null && employee.getLeavingDate().isBefore(date))) {
+                continue;
+            }
+
+            List<Attendance> records = repo.findByAttendanceDateAndOrganisationId(date, employee.getOrganisationId())
+                    .stream()
+                    .filter(record -> record.getEmployeeId().equals(employee.getId()))
+                    .toList();
+
+            boolean approvedAttendanceExists = records.stream()
+                    .anyMatch(record -> record.getStatus() == Attendance.AttendanceStatus.APPROVED
+                            && record.getType() != Attendance.AttendanceType.ABSENT);
+            if (approvedAttendanceExists) {
+                continue;
+            }
+
+            records.stream()
+                    .filter(record -> record.getStatus() == Attendance.AttendanceStatus.PENDING)
+                    .forEach(record -> record.setStatus(Attendance.AttendanceStatus.REJECTED));
+
+            boolean absentExists = records.stream()
+                    .anyMatch(record -> record.getType() == Attendance.AttendanceType.ABSENT);
+            if (!absentExists) {
+                Attendance absent = new Attendance();
+                absent.setOrganisationId(employee.getOrganisationId());
+                absent.setEmployeeId(employee.getId());
+                absent.setAttendanceDate(date);
+                absent.setType(Attendance.AttendanceType.ABSENT);
+                absent.setStatus(Attendance.AttendanceStatus.APPROVED);
+                records.add(absent);
+            }
+
+            repo.saveAll(records);
+        }
     }
 
     @Transactional

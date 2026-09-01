@@ -77,7 +77,9 @@ class PayrollServiceTest {
                 .thenReturn(Optional.of(employee));
         when(attendanceRepository.findByEmployeeIdAndOrganisationIdAndAttendanceDateBetweenOrderByAttendanceDateAsc(any(), any(), any(), any()))
                 .thenReturn(List.of(createAttendance(AttendanceType.PRESENT), createAttendance(AttendanceType.WORKED_DOUBLE)));
-        when(advanceRepository.findByEmployeeIdAndSettledFalseAndAdvanceDateBetween(any(), any(), any()))
+            when(advanceRepository.findByEmployeeIdAndOrganisationIdAndStatusAndSettledFalseAndAdvanceDateBetween(any(), any(), any(), any(), any()))
+                .thenReturn(List.of(createAdvance()));
+            when(advanceRepository.findByEmployeeIdAndOrganisationIdAndSettledFalseAndAdvanceDateBetween(any(), any(), any(), any()))
                 .thenReturn(List.of(createAdvance()));
         when(objectMapper.writeValueAsString(anyList())).thenReturn("[]");
         when(payrollRepository.save(any(Payroll.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -87,8 +89,8 @@ class PayrollServiceTest {
         assertNotNull(payroll);
         assertEquals("Test Employee", payroll.getEmployeeName());
         assertEquals(String.format("%04d-%02d", LocalDate.now().getYear(), LocalDate.now().getMonthValue()), payroll.getMonth());
-        assertEquals(new BigDecimal("2000.00"), payroll.getBaseSalary());
-        assertEquals(new BigDecimal("2000.00"), payroll.getGrossAmount());
+            assertEquals(new BigDecimal("1500.00"), payroll.getBaseSalary());
+            assertEquals(new BigDecimal("1500.00"), payroll.getGrossAmount());
 
         ArgumentCaptor<Payroll> payrollCaptor = ArgumentCaptor.forClass(Payroll.class);
         verify(payrollRepository).save(payrollCaptor.capture());
@@ -102,6 +104,7 @@ class PayrollServiceTest {
         attendance.setEmployeeId(employeeId);
         attendance.setAttendanceDate(LocalDate.now());
         attendance.setType(type);
+            attendance.setStatus(Attendance.AttendanceStatus.APPROVED);
         return attendance;
     }
 
