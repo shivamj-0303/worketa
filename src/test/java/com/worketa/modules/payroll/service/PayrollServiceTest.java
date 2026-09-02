@@ -89,8 +89,9 @@ class PayrollServiceTest {
         assertNotNull(payroll);
         assertEquals("Test Employee", payroll.getEmployeeName());
         assertEquals(String.format("%04d-%02d", LocalDate.now().getYear(), LocalDate.now().getMonthValue()), payroll.getMonth());
-            assertEquals(new BigDecimal("1500.00"), payroll.getBaseSalary());
-            assertEquals(new BigDecimal("1500.00"), payroll.getGrossAmount());
+            // dailyWage: 500, 1 PRESENT day (500) + 1 DOUBLE day (500 bonus only) = 1000
+            assertEquals(new BigDecimal("1000.00"), payroll.getBaseSalary());
+            assertEquals(new BigDecimal("1000.00"), payroll.getGrossAmount());
 
         ArgumentCaptor<Payroll> payrollCaptor = ArgumentCaptor.forClass(Payroll.class);
         verify(payrollRepository).save(payrollCaptor.capture());

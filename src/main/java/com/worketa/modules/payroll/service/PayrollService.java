@@ -106,11 +106,12 @@ public class PayrollService {
 
         BigDecimal dailyWage = employee.getDailyWage();
 
+        // For present days: add full daily wage
+        // For double days: add only 500 (no daily wage)
         BigDecimal bonusAmount = BigDecimal.valueOf(500L).multiply(BigDecimal.valueOf(doubledDays));
 
         BigDecimal grossAmount =
                 dailyWage.multiply(BigDecimal.valueOf(presentDays))
-                        .add(dailyWage.multiply(BigDecimal.valueOf(doubledDays)))
                         .add(bonusAmount);
 
         List<Advance> advances =

@@ -3,12 +3,13 @@ package com.worketa.modules.attendance.service;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.scheduling.annotation.Scheduled;
 
 import com.worketa.common.exception.ApiException;
 import com.worketa.common.security.OrganisationContext;
@@ -68,36 +69,49 @@ public class AttendanceService {
                 continue;
             }
 
-            List<Attendance> records = repo.findByAttendanceDateAndOrganisationId(date, employee.getOrganisationId())
-                    .stream()
-                    .filter(record -> record.getEmployeeId().equals(employee.getId()))
-                    .toList();
-
-            boolean approvedAttendanceExists = records.stream()
-                    .anyMatch(record -> record.getStatus() == Attendance.AttendanceStatus.APPROVED
-                            && record.getType() != Attendance.AttendanceType.ABSENT);
-            if (approvedAttendanceExists) {
-                continue;
-            }
-
-            records.stream()
-                    .filter(record -> record.getStatus() == Attendance.AttendanceStatus.PENDING)
-                    .forEach(record -> record.setStatus(Attendance.AttendanceStatus.REJECTED));
-
-            boolean absentExists = records.stream()
-                    .anyMatch(record -> record.getType() == Attendance.AttendanceType.ABSENT);
-            if (!absentExists) {
-                Attendance absent = new Attendance();
-                absent.setOrganisationId(employee.getOrganisationId());
-                absent.setEmployeeId(employee.getId());
-                absent.setAttendanceDate(date);
-                absent.setType(Attendance.AttendanceType.ABSENT);
-                absent.setStatus(Attendance.AttendanceStatus.APPROVED);
-                records.add(absent);
-            }
-
-            repo.saveAll(records);
+            ensureAbsentAttendanceForEmployee(employee, date);
         }
+    }
+
+    @Transactional
+    public Attendance ensureAbsentAttendanceForEmployee(Employee employee, LocalDate date) {
+        List<Attendance> records = new ArrayList<>(
+                repo.findByAttendanceDateAndOrganisationId(date, employee.getOrganisationId())
+                        .stream()
+                        .filter(record -> record.getEmployeeId().equals(employee.getId()))
+                        .toList()
+        );
+
+        boolean approvedAttendanceExists = records.stream()
+                .anyMatch(record -> record.getStatus() == Attendance.AttendanceStatus.APPROVED
+                        && record.getType() != Attendance.AttendanceType.ABSENT);
+        if (approvedAttendanceExists) {
+            return null;
+        }
+
+        records.stream()
+                .filter(record -> record.getStatus() == Attendance.AttendanceStatus.PENDING)
+                .forEach(record -> record.setStatus(Attendance.AttendanceStatus.REJECTED));
+
+        boolean absentExists = records.stream()
+                .anyMatch(record -> record.getType() == Attendance.AttendanceType.ABSENT);
+        if (absentExists) {
+            return repo.saveAll(records).stream()
+                    .filter(record -> record.getType() == Attendance.AttendanceType.ABSENT)
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        Attendance absent = new Attendance();
+        absent.setOrganisationId(employee.getOrganisationId());
+        absent.setEmployeeId(employee.getId());
+        absent.setAttendanceDate(date);
+        absent.setType(Attendance.AttendanceType.ABSENT);
+        absent.setStatus(Attendance.AttendanceStatus.APPROVED);
+        records.add(absent);
+
+        repo.saveAll(records);
+        return absent;
     }
 
     @Transactional

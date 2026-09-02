@@ -32,8 +32,8 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<ApiResponse<String>> refresh(@Valid @RequestBody RefreshTokenRequest req) {
-        String accessToken = service.refreshAccessToken(req.getRefreshToken());
-        return ResponseEntity.ok(ApiResponse.ok("Token refreshed", accessToken));
+    public ResponseEntity<ApiResponse<Map<String, String>>> refresh(@Valid @RequestBody RefreshTokenRequest req) {
+        Map<String, String> tokens = service.refreshAccessToken(req.getRefreshToken());
+        return ResponseEntity.ok(ApiResponse.ok("Token refreshed", tokens));
     }
 }

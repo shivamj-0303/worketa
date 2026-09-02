@@ -26,6 +26,7 @@ import com.worketa.common.exception.ApiException;
 import com.worketa.common.security.JwtTokenProvider;
 import com.worketa.modules.auth.dto.LoginRequest;
 import com.worketa.modules.auth.repository.RefreshTokenRepository;
+import com.worketa.modules.employees.repository.EmployeeRepository;
 import com.worketa.modules.users.entity.User;
 import com.worketa.modules.users.repository.UserRepository;
 
@@ -44,6 +45,9 @@ class AuthServiceTest {
     @Mock
     private RefreshTokenRepository refreshTokenRepo;
 
+    @Mock
+    private EmployeeRepository employeeRepo;
+
     @InjectMocks
     private AuthService service;
 
@@ -58,6 +62,7 @@ class AuthServiceTest {
         testUser = new User();
         testUser.setId(UUID.randomUUID());
         testUser.setEmail("user@test.com");
+        testUser.setFullName("Test User");
         testUser.setPassword("hashedpassword");
         testUser.setOrganisationId(orgId);
         testUser.setRoles("ADMIN");
@@ -84,6 +89,9 @@ class AuthServiceTest {
                 anyString(),
                 anyMap()
         )).thenReturn("access_token");
+
+        when(employeeRepo.findByOrganisationIdAndFullName(any(), anyString()))
+                .thenReturn(Optional.empty());
 
         when(refreshTokenRepo.save(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -164,5 +172,28 @@ class AuthServiceTest {
                 ApiException.class,
                 () -> service.login(loginRequest)
         );
+    }
+
+    @Test
+    void testRefreshAccessTokenReturnsNewTokens() {
+        String refreshTokenValue = "refresh-token-123";
+        var refreshToken = new com.worketa.modules.auth.entity.RefreshToken();
+        refreshToken.setUser(testUser);
+        refreshToken.setToken(refreshTokenValue);
+        refreshToken.setExpiresAt(java.time.OffsetDateTime.now().plusDays(1));
+
+        when(refreshTokenRepo.findByToken(eq(refreshTokenValue)))
+                .thenReturn(Optional.of(refreshToken));
+        when(jwt.createAccessToken(anyString(), anyMap()))
+                .thenReturn("new_access_token");
+        when(employeeRepo.findByOrganisationIdAndFullName(any(), anyString()))
+                .thenReturn(Optional.empty());
+
+        Map<String, String> result = service.refreshAccessToken(refreshTokenValue);
+
+        assertNotNull(result);
+        assertTrue(result.containsKey("accessToken"));
+        assertTrue(result.containsKey("refreshToken"));
+        assertTrue(result.get("accessToken").equals("new_access_token"));
     }
 }

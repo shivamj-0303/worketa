@@ -103,7 +103,7 @@ public class AuthService {
     }
 
     @Transactional
-    public String refreshAccessToken(String refreshTokenStr) {
+    public Map<String, String> refreshAccessToken(String refreshTokenStr) {
 
         RefreshToken refreshToken = refreshTokenRepo.findByToken(refreshTokenStr)
                 .orElseThrow(() -> new ApiException("Invalid refresh token"));
@@ -134,9 +134,22 @@ public class AuthService {
             claims.put("employeeId", employee.getId().toString());
         }
 
-        return jwt.createAccessToken(
+        String accessToken = jwt.createAccessToken(
                 user.getId().toString(),
                 claims
         );
+
+        Map<String, String> response = new java.util.HashMap<>();
+        response.put("accessToken", accessToken);
+        response.put("refreshToken", refreshToken.getToken());
+        response.put("userId", user.getId().toString());
+        response.put("email", user.getEmail());
+        response.put("fullName", user.getFullName());
+        response.put("role", role);
+        if (employee != null) {
+            response.put("employeeId", employee.getId().toString());
+        }
+
+        return response;
     }
 }
