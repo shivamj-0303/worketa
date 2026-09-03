@@ -116,6 +116,10 @@ public class AuthService {
             throw new ApiException("Refresh token expired");
         }
 
+        // Keep an actively used session alive without changing its server-side identity.
+        refreshToken.setExpiresAt(OffsetDateTime.now().plusDays(7));
+        refreshTokenRepo.save(refreshToken);
+
         User user = refreshToken.getUser();
 
         String role = user.getRoles();
@@ -139,17 +143,9 @@ public class AuthService {
                 claims
         );
 
-        Map<String, String> response = new java.util.HashMap<>();
-        response.put("accessToken", accessToken);
-        response.put("refreshToken", refreshToken.getToken());
-        response.put("userId", user.getId().toString());
-        response.put("email", user.getEmail());
-        response.put("fullName", user.getFullName());
-        response.put("role", role);
-        if (employee != null) {
-            response.put("employeeId", employee.getId().toString());
-        }
-
-        return response;
+        return Map.of(
+            "accessToken", accessToken,
+            "refreshToken", refreshToken.getToken()
+        );
     }
 }
