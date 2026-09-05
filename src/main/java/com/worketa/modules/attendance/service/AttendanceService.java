@@ -38,9 +38,14 @@ public class AttendanceService {
         if (attendance.getEmployeeId() == null || attendance.getType() == null) {
             throw new ApiException("Employee and attendance type are required");
         }
-        if (repo.findByEmployeeIdAndOrganisationIdAndAttendanceDateAndType(
-                attendance.getEmployeeId(), organisationId, attendance.getAttendanceDate(), attendance.getType()).isPresent()) {
-            throw new ApiException("This attendance request already exists for this date");
+        List<Attendance> records = repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(
+                attendance.getEmployeeId(), organisationId, attendance.getAttendanceDate());
+        if (records.stream().anyMatch(record -> record.getType() == attendance.getType())) {
+            throw new ApiException("This attendance type has already been submitted for this date");
+        }
+        if (attendance.getType() == Attendance.AttendanceType.ABSENT || records.stream()
+                .anyMatch(record -> record.getType() == Attendance.AttendanceType.ABSENT)) {
+            throw new ApiException("Absent attendance cannot be combined with another attendance type");
         }
         LocalTime currentTime = WorketaClock.now().toLocalTime();
         boolean doubleWindowOpen = !currentTime.isBefore(LocalTime.of(17, 0))
@@ -50,6 +55,36 @@ public class AttendanceService {
         }
         attendance.setStatus(Attendance.AttendanceStatus.PENDING);
         return repo.save(attendance);
+    }
+
+    @Transactional
+    public Attendance markAdminAttendance(Attendance attendance) {
+        UUID organisationId = OrganisationContext.get();
+        if (attendance.getEmployeeId() == null
+                || attendance.getAttendanceDate() == null
+                || attendance.getType() == null) {
+            throw new ApiException("Employee, attendance date and attendance type are required");
+        }
+
+        List<Attendance> records = repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(
+            attendance.getEmployeeId(), organisationId, attendance.getAttendanceDate());
+
+        Attendance authoritative = records.isEmpty() ? new Attendance() : records.get(0);
+        authoritative.setOrganisationId(organisationId);
+        authoritative.setEmployeeId(attendance.getEmployeeId());
+        authoritative.setAttendanceDate(attendance.getAttendanceDate());
+        authoritative.setType(attendance.getType());
+        authoritative.setStatus(Attendance.AttendanceStatus.APPROVED);
+        authoritative.setCheckinTime(attendance.getCheckinTime());
+        authoritative.setCheckoutTime(attendance.getCheckoutTime());
+
+        if (records.size() > 1) {
+            repo.deleteAll(records.stream()
+                    .filter(record -> !record.getId().equals(authoritative.getId()))
+                    .toList());
+        }
+
+        return repo.save(authoritative);
     }
 
     @Scheduled(cron = "0 0 * * * *", zone = "Asia/Kolkata")

@@ -85,6 +85,7 @@ public class PayrollService {
         int requestedPresentDays = 0;
         int requestedDoubledDays = 0;
         int requestedAbsentDays = 0;
+        Map<LocalDate, List<Attendance>> approvedByDate = new LinkedHashMap<>();
 
         for (Attendance attendance : attendances) {
                         switch (attendance.getType()) {
@@ -97,17 +98,29 @@ public class PayrollService {
                                 continue;
                         }
 
-                        switch (attendance.getType()) {
-                                case PRESENT -> presentDays++;
-                                case WORKED_DOUBLE -> doubledDays++;
-                                case ABSENT -> absentDays++;
-            }
+                        approvedByDate.computeIfAbsent(attendance.getAttendanceDate(), ignored -> new java.util.ArrayList<>())
+                                .add(attendance);
+        }
+
+        for (List<Attendance> dailyRecords : approvedByDate.values()) {
+                boolean absent = dailyRecords.stream()
+                        .anyMatch(attendance -> attendance.getType() == Attendance.AttendanceType.ABSENT);
+                boolean doubled = dailyRecords.stream()
+                        .anyMatch(attendance -> attendance.getType() == Attendance.AttendanceType.WORKED_DOUBLE);
+
+                if (absent) {
+                        absentDays++;
+                } else {
+                        presentDays++;
+                        if (doubled) {
+                                doubledDays++;
+                        }
+                }
         }
 
         BigDecimal dailyWage = employee.getDailyWage();
 
-        // For present days: add full daily wage
-        // For double days: add only 500 (no daily wage)
+        // Double attendance earns the daily wage plus a fixed 500 bonus.
         BigDecimal bonusAmount = BigDecimal.valueOf(500L).multiply(BigDecimal.valueOf(doubledDays));
 
         BigDecimal grossAmount =

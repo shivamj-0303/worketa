@@ -89,7 +89,7 @@ class PayrollServiceTest {
         assertNotNull(payroll);
         assertEquals("Test Employee", payroll.getEmployeeName());
         assertEquals(String.format("%04d-%02d", LocalDate.now().getYear(), LocalDate.now().getMonthValue()), payroll.getMonth());
-            // dailyWage: 500, 1 PRESENT day (500) + 1 DOUBLE day (500 bonus only) = 1000
+            // Same date: PRESENT plus DOUBLE earns one daily wage and one 500 bonus = 1000.
             assertEquals(new BigDecimal("1000.00"), payroll.getBaseSalary());
             assertEquals(new BigDecimal("1000.00"), payroll.getGrossAmount());
 

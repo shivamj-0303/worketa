@@ -37,6 +37,13 @@ public class AttendanceController {
         return ResponseEntity.ok(ApiResponse.ok("Attendance marked", record));
     }
 
+    @PostMapping("/admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Attendance>> markAdminAttendance(@RequestBody Attendance attendance) {
+        Attendance record = service.markAdminAttendance(attendance);
+        return ResponseEntity.ok(ApiResponse.ok("Admin attendance marked", record));
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<Attendance>> updateAttendance(
             @PathVariable UUID id,

@@ -51,12 +51,48 @@ class AttendanceServiceTest {
         attendance.setAttendanceDate(LocalDate.now());
         attendance.setType(Attendance.AttendanceType.PRESENT);
 
+        when(repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(
+            any(), any(), any())).thenReturn(List.of());
         when(repo.save(any(Attendance.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Attendance saved = service.markAttendance(attendance);
 
         assertNotNull(saved);
         assertEquals(AttendanceStatus.PENDING, saved.getStatus());
+    }
+
+    @Test
+    void markAttendanceRejectsAbsentWhenAnotherTypeExists() {
+        Attendance attendance = new Attendance();
+        attendance.setEmployeeId(UUID.randomUUID());
+        attendance.setType(Attendance.AttendanceType.ABSENT);
+
+        Attendance existing = new Attendance();
+        existing.setType(Attendance.AttendanceType.PRESENT);
+        when(repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(any(), any(), any()))
+                .thenReturn(List.of(existing));
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.worketa.common.exception.ApiException.class,
+                () -> service.markAttendance(attendance));
+    }
+
+    @Test
+    void markAttendanceAllowsDoubleAfterPresentForSameDate() {
+        Attendance attendance = new Attendance();
+        attendance.setEmployeeId(UUID.randomUUID());
+        attendance.setType(Attendance.AttendanceType.WORKED_DOUBLE);
+
+        Attendance existing = new Attendance();
+        existing.setType(Attendance.AttendanceType.PRESENT);
+        when(repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(any(), any(), any()))
+                .thenReturn(List.of(existing));
+        when(repo.save(any(Attendance.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Attendance saved = service.markAttendance(attendance);
+
+        assertEquals(AttendanceStatus.PENDING, saved.getStatus());
+        verify(repo).save(attendance);
     }
 
     @Test
@@ -101,5 +137,27 @@ class AttendanceServiceTest {
         assertEquals(Attendance.AttendanceType.ABSENT, saved.getType());
         assertEquals(AttendanceStatus.APPROVED, saved.getStatus());
         verify(repo).save(attendance);
+    }
+
+    @Test
+    void adminAttendanceCreatesApprovedAuthoritativeRecordForSelectedDate() {
+        UUID employeeId = UUID.randomUUID();
+        LocalDate selectedDate = LocalDate.of(2026, 9, 6);
+        Attendance request = new Attendance();
+        request.setEmployeeId(employeeId);
+        request.setAttendanceDate(selectedDate);
+        request.setType(Attendance.AttendanceType.PRESENT);
+
+        when(repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(employeeId, organisationId, selectedDate))
+                .thenReturn(List.of());
+        when(repo.save(any(Attendance.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Attendance saved = service.markAdminAttendance(request);
+
+        assertEquals(employeeId, saved.getEmployeeId());
+        assertEquals(selectedDate, saved.getAttendanceDate());
+        assertEquals(Attendance.AttendanceType.PRESENT, saved.getType());
+        assertEquals(AttendanceStatus.APPROVED, saved.getStatus());
+        verify(repo).save(any(Attendance.class));
     }
 }

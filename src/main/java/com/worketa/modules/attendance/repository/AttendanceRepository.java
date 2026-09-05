@@ -12,6 +12,11 @@ import com.worketa.modules.attendance.entity.Attendance;
 public interface AttendanceRepository extends JpaRepository<Attendance, UUID> {
     List<Attendance> findByOrganisationId(UUID organisationId);
     List<Attendance> findByAttendanceDateAndOrganisationId(LocalDate date, UUID organisationId);
+    List<Attendance> findByEmployeeIdAndOrganisationIdAndAttendanceDate(
+        UUID employeeId,
+        UUID organisationId,
+        LocalDate date
+    );
         Optional<Attendance> findByEmployeeIdAndOrganisationIdAndAttendanceDateAndType(
             UUID employeeId,
             UUID organisationId,
