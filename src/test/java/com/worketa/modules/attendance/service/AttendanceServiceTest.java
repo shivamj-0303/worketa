@@ -81,4 +81,25 @@ class AttendanceServiceTest {
         assertEquals(AttendanceStatus.APPROVED, absent.getStatus());
         verify(repo).saveAll(any());
     }
+
+    @Test
+    void rejectAttendanceConvertsRequestToApprovedAbsentRecord() {
+        UUID attendanceId = UUID.randomUUID();
+        Attendance attendance = new Attendance();
+        attendance.setId(attendanceId);
+        attendance.setOrganisationId(organisationId);
+        attendance.setEmployeeId(UUID.randomUUID());
+        attendance.setAttendanceDate(LocalDate.now());
+        attendance.setType(Attendance.AttendanceType.PRESENT);
+        attendance.setStatus(AttendanceStatus.PENDING);
+
+        when(repo.findById(attendanceId)).thenReturn(java.util.Optional.of(attendance));
+        when(repo.save(any(Attendance.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Attendance saved = service.rejectAttendance(attendanceId);
+
+        assertEquals(Attendance.AttendanceType.ABSENT, saved.getType());
+        assertEquals(AttendanceStatus.APPROVED, saved.getStatus());
+        verify(repo).save(attendance);
+    }
 }

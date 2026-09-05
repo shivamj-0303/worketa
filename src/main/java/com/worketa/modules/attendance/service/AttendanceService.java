@@ -91,7 +91,12 @@ public class AttendanceService {
 
         records.stream()
                 .filter(record -> record.getStatus() == Attendance.AttendanceStatus.PENDING)
-                .forEach(record -> record.setStatus(Attendance.AttendanceStatus.REJECTED));
+                .forEach(record -> {
+                    record.setType(Attendance.AttendanceType.ABSENT);
+                    record.setStatus(Attendance.AttendanceStatus.APPROVED);
+                    record.setCheckinTime(null);
+                    record.setCheckoutTime(null);
+                });
 
         boolean absentExists = records.stream()
                 .anyMatch(record -> record.getType() == Attendance.AttendanceType.ABSENT);
@@ -124,7 +129,10 @@ public class AttendanceService {
     @Transactional
     public Attendance rejectAttendance(UUID id) {
         Attendance existing = getById(id);
-        existing.setStatus(Attendance.AttendanceStatus.REJECTED);
+        existing.setType(Attendance.AttendanceType.ABSENT);
+        existing.setStatus(Attendance.AttendanceStatus.APPROVED);
+        existing.setCheckinTime(null);
+        existing.setCheckoutTime(null);
         return repo.save(existing);
     }
 
