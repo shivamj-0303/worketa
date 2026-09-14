@@ -120,9 +120,7 @@ public class EmployeeService {
     }
 
     private String generateEmployeeCode() {
-        long count = repo.count() + 1;
-
-        return "EMP-" + String.format("%04d", count);
+        return "EMP-" + String.format("%04d", repo.nextEmployeeCodeNumber());
     }
 
     private String generateTemporaryPassword() {
