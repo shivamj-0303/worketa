@@ -206,7 +206,8 @@ interface EmployeeData {
   id: string
   fullName: string
   type: string
-  dailyWage: number
+  monthlySalary: number
+  absentDeductionPerDay: number
 }
 
 interface AttendanceRecord {

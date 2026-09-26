@@ -11,8 +11,8 @@ public class DashboardStatsResponse {
     private long totalDrivers;
     private long totalAssistants;
 
-    private BigDecimal totalDailyWage;
-    private BigDecimal activeEmployeesDailyWage;
+    private BigDecimal totalMonthlySalary;
+    private BigDecimal activeEmployeesMonthlySalary;
 
     public DashboardStatsResponse() {
     }
@@ -57,20 +57,20 @@ public class DashboardStatsResponse {
         this.totalAssistants = totalAssistants;
     }
 
-    public BigDecimal getTotalDailyWage() {
-        return totalDailyWage;
+    public BigDecimal getTotalMonthlySalary() {
+        return totalMonthlySalary;
     }
 
-    public void setTotalDailyWage(BigDecimal totalDailyWage) {
-        this.totalDailyWage = totalDailyWage;
+    public void setTotalMonthlySalary(BigDecimal totalMonthlySalary) {
+        this.totalMonthlySalary = totalMonthlySalary;
     }
 
-    public BigDecimal getActiveEmployeesDailyWage() {
-        return activeEmployeesDailyWage;
+    public BigDecimal getActiveEmployeesMonthlySalary() {
+        return activeEmployeesMonthlySalary;
     }
 
-    public void setActiveEmployeesDailyWage(
-            BigDecimal activeEmployeesDailyWage) {
-        this.activeEmployeesDailyWage = activeEmployeesDailyWage;
+    public void setActiveEmployeesMonthlySalary(
+            BigDecimal activeEmployeesMonthlySalary) {
+        this.activeEmployeesMonthlySalary = activeEmployeesMonthlySalary;
     }
 }

@@ -50,8 +50,11 @@ public class Employee extends Auditable {
     @Column(nullable = false)
     private boolean active = true;
 
-    @Column(name = "daily_wage", nullable = false, precision = 10, scale = 2)
-    private BigDecimal dailyWage = BigDecimal.ZERO;
+    @Column(name = "monthly_salary", nullable = false, precision = 12, scale = 2)
+    private BigDecimal monthlySalary = BigDecimal.ZERO;
+
+    @Column(name = "absent_deduction_per_day", nullable = false, precision = 10, scale = 2)
+    private BigDecimal absentDeductionPerDay = BigDecimal.valueOf(600);
 
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
@@ -71,8 +74,10 @@ public class Employee extends Auditable {
     public void setLeavingDate(LocalDate leavingDate) { this.leavingDate = leavingDate; }
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
-    public BigDecimal getDailyWage() { return dailyWage; }
-    public void setDailyWage(BigDecimal dailyWage) { this.dailyWage = dailyWage; }
+    public BigDecimal getMonthlySalary() { return monthlySalary; }
+    public void setMonthlySalary(BigDecimal monthlySalary) { this.monthlySalary = monthlySalary; }
+    public BigDecimal getAbsentDeductionPerDay() { return absentDeductionPerDay; }
+    public void setAbsentDeductionPerDay(BigDecimal absentDeductionPerDay) { this.absentDeductionPerDay = absentDeductionPerDay; }
 
     public enum EmployeeType {
         DRIVER, ASSISTANT

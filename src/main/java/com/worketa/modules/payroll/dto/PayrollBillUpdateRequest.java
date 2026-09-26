@@ -19,7 +19,7 @@ public class PayrollBillUpdateRequest {
     private LocalDate periodEnd;
 
     @NotNull
-    private BigDecimal dailyWage;
+    private BigDecimal monthlySalary;
 
     private int presentDays;
 
@@ -65,12 +65,12 @@ public class PayrollBillUpdateRequest {
         this.periodEnd = periodEnd;
     }
 
-    public BigDecimal getDailyWage() {
-        return dailyWage;
+    public BigDecimal getMonthlySalary() {
+        return monthlySalary;
     }
 
-    public void setDailyWage(BigDecimal dailyWage) {
-        this.dailyWage = dailyWage;
+    public void setMonthlySalary(BigDecimal monthlySalary) {
+        this.monthlySalary = monthlySalary;
     }
 
     public int getPresentDays() {

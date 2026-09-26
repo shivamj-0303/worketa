@@ -39,7 +39,9 @@ public class Payroll extends Auditable {
 
     private LocalDate periodEnd;
 
-    private BigDecimal dailyWage = BigDecimal.ZERO;
+    private BigDecimal monthlySalary = BigDecimal.ZERO;
+    private BigDecimal absentDeductionPerDay = BigDecimal.ZERO;
+    private BigDecimal absenceDeduction = BigDecimal.ZERO;
 
     private int presentDays;
 
@@ -127,13 +129,17 @@ public class Payroll extends Auditable {
         this.periodEnd = periodEnd;
     }
 
-    public BigDecimal getDailyWage() {
-        return dailyWage;
+    public BigDecimal getMonthlySalary() {
+        return monthlySalary;
     }
 
-    public void setDailyWage(BigDecimal dailyWage) {
-        this.dailyWage = dailyWage;
+    public void setMonthlySalary(BigDecimal monthlySalary) {
+        this.monthlySalary = monthlySalary;
     }
+    public BigDecimal getAbsentDeductionPerDay() { return absentDeductionPerDay; }
+    public void setAbsentDeductionPerDay(BigDecimal absentDeductionPerDay) { this.absentDeductionPerDay = absentDeductionPerDay; }
+    public BigDecimal getAbsenceDeduction() { return absenceDeduction; }
+    public void setAbsenceDeduction(BigDecimal absenceDeduction) { this.absenceDeduction = absenceDeduction; }
 
     public int getPresentDays() {
         return presentDays;

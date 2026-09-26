@@ -67,7 +67,8 @@ class PayrollServiceTest {
         employee.setId(employeeId);
         employee.setOrganisationId(organisationId);
         employee.setFullName("Test Employee");
-        employee.setDailyWage(new BigDecimal("500.00"));
+        employee.setMonthlySalary(new BigDecimal("15000.00"));
+        employee.setAbsentDeductionPerDay(new BigDecimal("600.00"));
         employee.setJoiningDate(LocalDate.now().minusDays(10));
     }
 
@@ -89,9 +90,9 @@ class PayrollServiceTest {
         assertNotNull(payroll);
         assertEquals("Test Employee", payroll.getEmployeeName());
         assertEquals(String.format("%04d-%02d", LocalDate.now().getYear(), LocalDate.now().getMonthValue()), payroll.getMonth());
-            // Same date: PRESENT plus DOUBLE earns one daily wage and one 500 bonus = 1000.
-            assertEquals(new BigDecimal("1000.00"), payroll.getBaseSalary());
-            assertEquals(new BigDecimal("1000.00"), payroll.getGrossAmount());
+            // Same date: monthly salary plus the default double-attendance bonus.
+            assertEquals(new BigDecimal("15500.00"), payroll.getBaseSalary());
+            assertEquals(new BigDecimal("15500.00"), payroll.getGrossAmount());
 
         ArgumentCaptor<Payroll> payrollCaptor = ArgumentCaptor.forClass(Payroll.class);
         verify(payrollRepository).save(payrollCaptor.capture());
@@ -99,6 +100,65 @@ class PayrollServiceTest {
         assertEquals(String.format("%04d-%02d", LocalDate.now().getYear(), LocalDate.now().getMonthValue()), payrollCaptor.getValue().getMonth());
         verify(advanceRepository).saveAll(anyList());
     }
+
+        @Test
+        void absentDaysAreDeductedFromMonthlySalary() {
+        when(employeeRepository.findByIdAndOrganisationId(employeeId, organisationId))
+            .thenReturn(Optional.of(employee));
+        Attendance absent = createAttendance(AttendanceType.ABSENT);
+        when(attendanceRepository.findByEmployeeIdAndOrganisationIdAndAttendanceDateBetweenOrderByAttendanceDateAsc(any(), any(), any(), any()))
+            .thenReturn(List.of(absent));
+        when(advanceRepository.findByEmployeeIdAndOrganisationIdAndStatusAndSettledFalseAndAdvanceDateBetween(any(), any(), any(), any(), any()))
+            .thenReturn(List.of());
+        when(advanceRepository.findByEmployeeIdAndOrganisationIdAndSettledFalseAndAdvanceDateBetween(any(), any(), any(), any()))
+            .thenReturn(List.of());
+
+        var summary = service.getPayrollSummary(employeeId);
+
+        assertEquals(new BigDecimal("600.00"), summary.getAbsenceDeduction());
+        assertEquals(new BigDecimal("14400.00"), summary.getGrossAmount());
+        }
+
+        @Test
+        void pendingDoubleAttendanceDoesNotAddBonusToPayroll() {
+        when(employeeRepository.findByIdAndOrganisationId(employeeId, organisationId))
+            .thenReturn(Optional.of(employee));
+        Attendance pendingDouble = createAttendance(AttendanceType.WORKED_DOUBLE);
+        pendingDouble.setStatus(Attendance.AttendanceStatus.PENDING);
+        pendingDouble.setBonusAmount(new BigDecimal("500.00"));
+        when(attendanceRepository.findByEmployeeIdAndOrganisationIdAndAttendanceDateBetweenOrderByAttendanceDateAsc(any(), any(), any(), any()))
+            .thenReturn(List.of(pendingDouble));
+        when(advanceRepository.findByEmployeeIdAndOrganisationIdAndStatusAndSettledFalseAndAdvanceDateBetween(any(), any(), any(), any(), any()))
+            .thenReturn(List.of());
+        when(advanceRepository.findByEmployeeIdAndOrganisationIdAndSettledFalseAndAdvanceDateBetween(any(), any(), any(), any()))
+            .thenReturn(List.of());
+
+        var summary = service.getPayrollSummary(employeeId);
+
+        assertEquals(BigDecimal.ZERO, summary.getBonusAmount());
+        assertEquals(new BigDecimal("15000.00"), summary.getGrossAmount());
+        assertEquals(1, summary.getRequestedDoubledDays());
+        }
+
+        @Test
+        void sundayAttendanceIsExcludedFromPayrollDayCountsAndDeduction() {
+        when(employeeRepository.findByIdAndOrganisationId(employeeId, organisationId))
+            .thenReturn(Optional.of(employee));
+        Attendance sundayAbsent = createAttendance(AttendanceType.ABSENT);
+        sundayAbsent.setAttendanceDate(LocalDate.of(2026, 9, 6));
+        when(attendanceRepository.findByEmployeeIdAndOrganisationIdAndAttendanceDateBetweenOrderByAttendanceDateAsc(any(), any(), any(), any()))
+            .thenReturn(List.of(sundayAbsent));
+        when(advanceRepository.findByEmployeeIdAndOrganisationIdAndStatusAndSettledFalseAndAdvanceDateBetween(any(), any(), any(), any(), any()))
+            .thenReturn(List.of());
+        when(advanceRepository.findByEmployeeIdAndOrganisationIdAndSettledFalseAndAdvanceDateBetween(any(), any(), any(), any()))
+            .thenReturn(List.of());
+
+        var summary = service.getPayrollSummary(employeeId);
+
+        assertEquals(0, summary.getAbsentDays());
+        assertEquals(0, summary.getAbsenceDeduction().compareTo(BigDecimal.ZERO));
+        assertEquals(new BigDecimal("15000.00"), summary.getGrossAmount());
+        }
 
     private Attendance createAttendance(AttendanceType type) {
         Attendance attendance = new Attendance();

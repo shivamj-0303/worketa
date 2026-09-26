@@ -10,7 +10,8 @@ public class EmployeeCreateRequest {
     private String phone;
     private Employee.EmployeeType type;
     private LocalDate joiningDate;
-    private BigDecimal dailyWage = BigDecimal.ZERO;
+    private BigDecimal monthlySalary = BigDecimal.ZERO;
+    private BigDecimal absentDeductionPerDay = BigDecimal.valueOf(600);
     private String email;
     private String password;
     private boolean active = true;
@@ -27,8 +28,10 @@ public class EmployeeCreateRequest {
     public void setType(Employee.EmployeeType type) { this.type = type; }
     public LocalDate getJoiningDate() { return joiningDate; }
     public void setJoiningDate(LocalDate joiningDate) { this.joiningDate = joiningDate; }
-    public BigDecimal getDailyWage() { return dailyWage; }
-    public void setDailyWage(BigDecimal dailyWage) { this.dailyWage = dailyWage; }
+    public BigDecimal getMonthlySalary() { return monthlySalary; }
+    public void setMonthlySalary(BigDecimal monthlySalary) { this.monthlySalary = monthlySalary; }
+    public BigDecimal getAbsentDeductionPerDay() { return absentDeductionPerDay; }
+    public void setAbsentDeductionPerDay(BigDecimal absentDeductionPerDay) { this.absentDeductionPerDay = absentDeductionPerDay; }
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
     public String getPassword() { return password; }

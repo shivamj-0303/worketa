@@ -28,19 +28,19 @@ public interface DashboardRepository
     );
 
     @Query("""
-        SELECT COALESCE(SUM(e.dailyWage), 0)
+        SELECT COALESCE(SUM(e.monthlySalary), 0)
         FROM Employee e
         WHERE e.organisationId = :organisationId
         """)
-    BigDecimal getTotalDailyWage(UUID organisationId);
+        BigDecimal getTotalMonthlySalary(UUID organisationId);
 
     @Query("""
-        SELECT COALESCE(SUM(e.dailyWage), 0)
+        SELECT COALESCE(SUM(e.monthlySalary), 0)
         FROM Employee e
         WHERE e.organisationId = :organisationId
         AND e.active = true
         """)
-    BigDecimal getActiveEmployeesDailyWage(
+        BigDecimal getActiveEmployeesMonthlySalary(
             UUID organisationId
     );
 }

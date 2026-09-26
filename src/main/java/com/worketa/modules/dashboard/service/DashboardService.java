@@ -64,13 +64,13 @@ public class DashboardService {
                     Employee.EmployeeType.ASSISTANT
                 );
 
-        BigDecimal totalDailyWage =
-                repository.getTotalDailyWage(
+        BigDecimal totalMonthlySalary =
+            repository.getTotalMonthlySalary(
                     organisationId
                 );
 
-        BigDecimal activeDailyWage =
-                repository.getActiveEmployeesDailyWage(
+        BigDecimal activeMonthlySalary =
+            repository.getActiveEmployeesMonthlySalary(
                     organisationId
                 );
 
@@ -81,16 +81,16 @@ public class DashboardService {
         stats.setTotalDrivers(totalDrivers);
         stats.setTotalAssistants(totalAssistants);
 
-        stats.setTotalDailyWage(
-            totalDailyWage == null
+        stats.setTotalMonthlySalary(
+            totalMonthlySalary == null
                 ? BigDecimal.ZERO
-                : totalDailyWage
+                : totalMonthlySalary
         );
 
-        stats.setActiveEmployeesDailyWage(
-            activeDailyWage == null
+        stats.setActiveEmployeesMonthlySalary(
+            activeMonthlySalary == null
                 ? BigDecimal.ZERO
-                : activeDailyWage
+                : activeMonthlySalary
         );
 
         return stats;

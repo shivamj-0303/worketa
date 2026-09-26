@@ -33,7 +33,7 @@ public class WageHistory extends Auditable {
     private UUID employeeId;
 
     @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal dailyWage = BigDecimal.ZERO;
+    private BigDecimal monthlySalary = BigDecimal.ZERO;
 
     @Column(nullable = false)
     private LocalDate effectiveFrom;
@@ -46,8 +46,8 @@ public class WageHistory extends Auditable {
     public void setOrganisationId(UUID organisationId) { this.organisationId = organisationId; }
     public UUID getEmployeeId() { return employeeId; }
     public void setEmployeeId(UUID employeeId) { this.employeeId = employeeId; }
-    public BigDecimal getDailyWage() { return dailyWage; }
-    public void setDailyWage(BigDecimal dailyWage) { this.dailyWage = dailyWage; }
+    public BigDecimal getMonthlySalary() { return monthlySalary; }
+    public void setMonthlySalary(BigDecimal monthlySalary) { this.monthlySalary = monthlySalary; }
     public LocalDate getEffectiveFrom() { return effectiveFrom; }
     public void setEffectiveFrom(LocalDate effectiveFrom) { this.effectiveFrom = effectiveFrom; }
     public LocalDate getEffectiveTo() { return effectiveTo; }

@@ -58,7 +58,8 @@ public class EmployeeService {
         emp.setPhone(request.getPhone());
         emp.setType(request.getType());
         emp.setJoiningDate(request.getJoiningDate() != null ? request.getJoiningDate() : LocalDate.now());
-        emp.setDailyWage(request.getDailyWage() != null ? request.getDailyWage() : BigDecimal.ZERO);
+        emp.setMonthlySalary(request.getMonthlySalary() != null ? request.getMonthlySalary() : BigDecimal.ZERO);
+        emp.setAbsentDeductionPerDay(request.getAbsentDeductionPerDay() != null ? request.getAbsentDeductionPerDay() : BigDecimal.valueOf(600));
         emp.setActive(request.isActive());
 
         if (emp.getEmployeeCode() == null || emp.getEmployeeCode().isBlank()) {
@@ -86,7 +87,10 @@ public class EmployeeService {
         existing.setPhone(emp.getPhone());
         existing.setType(emp.getType());
         existing.setJoiningDate(emp.getJoiningDate());
-        existing.setDailyWage(emp.getDailyWage());
+        existing.setMonthlySalary(emp.getMonthlySalary());
+        existing.setAbsentDeductionPerDay(emp.getAbsentDeductionPerDay() != null
+            ? emp.getAbsentDeductionPerDay()
+            : BigDecimal.valueOf(600));
         existing.setActive(emp.isActive());
         return repo.save(existing);
     }

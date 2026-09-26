@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
+import java.math.BigDecimal;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -66,11 +67,23 @@ public class AttendanceController {
         return ResponseEntity.ok(ApiResponse.ok("Pending attendance requests retrieved", service.listPendingByOrg()));
     }
 
+    @GetMapping("/month")
+    public ResponseEntity<ApiResponse<List<Attendance>>> listByOrganisationAndMonth(
+            @RequestParam String month) {
+        return ResponseEntity.ok(ApiResponse.ok("Monthly attendance retrieved",
+                service.listByOrganisationAndMonth(YearMonth.parse(month))));
+    }
+
     @PostMapping("/{id}/approve")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Attendance>> approve(@PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.ok("Attendance approved", service.approveAttendance(id)));
+    public ResponseEntity<ApiResponse<Attendance>> approve(
+            @PathVariable UUID id,
+            @RequestBody(required = false) BonusApprovalRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok("Attendance approved", service.approveAttendance(
+                id, request == null ? null : request.bonusAmount())));
     }
+
+    public record BonusApprovalRequest(BigDecimal bonusAmount) {}
 
     @PostMapping("/{id}/reject")
     @PreAuthorize("hasRole('ADMIN')")

@@ -6,6 +6,7 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.math.BigDecimal;
 
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,9 @@ public class AttendanceService {
         UUID organisationId = OrganisationContext.get();
         attendance.setOrganisationId(organisationId);
         attendance.setAttendanceDate(WorketaClock.businessDate());
+        if (attendance.getAttendanceDate().getDayOfWeek() == java.time.DayOfWeek.SUNDAY) {
+            throw new ApiException("Attendance is not recorded on Sundays");
+        }
         if (attendance.getEmployeeId() == null || attendance.getType() == null) {
             throw new ApiException("Employee and attendance type are required");
         }
@@ -54,6 +58,7 @@ public class AttendanceService {
             throw new ApiException("Double attendance can only be requested between 5:00 PM and 2:00 AM");
         }
         attendance.setStatus(Attendance.AttendanceStatus.PENDING);
+        attendance.setBonusAmount(BigDecimal.ZERO);
         return repo.save(attendance);
     }
 
@@ -65,6 +70,9 @@ public class AttendanceService {
                 || attendance.getType() == null) {
             throw new ApiException("Employee, attendance date and attendance type are required");
         }
+        if (attendance.getAttendanceDate().getDayOfWeek() == java.time.DayOfWeek.SUNDAY) {
+            throw new ApiException("Attendance is not recorded on Sundays");
+        }
 
         List<Attendance> records = repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(
             attendance.getEmployeeId(), organisationId, attendance.getAttendanceDate());
@@ -75,6 +83,8 @@ public class AttendanceService {
         authoritative.setAttendanceDate(attendance.getAttendanceDate());
         authoritative.setType(attendance.getType());
         authoritative.setStatus(Attendance.AttendanceStatus.APPROVED);
+        authoritative.setBonusAmount(attendance.getType() == Attendance.AttendanceType.WORKED_DOUBLE
+            ? defaultBonus(attendance.getBonusAmount()) : BigDecimal.ZERO);
         authoritative.setCheckinTime(attendance.getCheckinTime());
         authoritative.setCheckoutTime(attendance.getCheckoutTime());
 
@@ -110,6 +120,10 @@ public class AttendanceService {
 
     @Transactional
     public Attendance ensureAbsentAttendanceForEmployee(Employee employee, LocalDate date) {
+        if (date.getDayOfWeek() == java.time.DayOfWeek.SUNDAY) {
+            return null;
+        }
+
         List<Attendance> records = new ArrayList<>(
                 repo.findByAttendanceDateAndOrganisationId(date, employee.getOrganisationId())
                         .stream()
@@ -156,9 +170,21 @@ public class AttendanceService {
 
     @Transactional
     public Attendance approveAttendance(UUID id) {
+        return approveAttendance(id, null);
+    }
+
+    @Transactional
+    public Attendance approveAttendance(UUID id, BigDecimal bonusAmount) {
         Attendance existing = getById(id);
+        if (existing.getType() == Attendance.AttendanceType.WORKED_DOUBLE) {
+            existing.setBonusAmount(defaultBonus(bonusAmount));
+        }
         existing.setStatus(Attendance.AttendanceStatus.APPROVED);
         return repo.save(existing);
+    }
+
+    private BigDecimal defaultBonus(BigDecimal bonusAmount) {
+        return bonusAmount == null ? BigDecimal.valueOf(500L) : bonusAmount;
     }
 
     @Transactional
@@ -191,24 +217,42 @@ public class AttendanceService {
 
     public Attendance getById(UUID id) {
         return repo.findById(id).filter(record -> record.getOrganisationId().equals(OrganisationContext.get()))
+                .filter(record -> record.getAttendanceDate().getDayOfWeek() != java.time.DayOfWeek.SUNDAY)
                 .orElseThrow(() -> new ApiException("Attendance record not found"));
     }
 
     public Attendance getByEmployeeAndDate(UUID empId, LocalDate date) {
+        if (date.getDayOfWeek() == java.time.DayOfWeek.SUNDAY) {
+            throw new ApiException("Attendance is not recorded on Sundays");
+        }
         return repo.findByEmployeeIdAndOrganisationIdAndAttendanceDateAndType(empId, OrganisationContext.get(), date, Attendance.AttendanceType.PRESENT)
                 .orElseThrow(() -> new ApiException("Attendance record not found"));
     }
 
     public List<Attendance> listByDate(LocalDate date) {
+        if (date.getDayOfWeek() == java.time.DayOfWeek.SUNDAY) {
+            return List.of();
+        }
         return repo.findByAttendanceDateAndOrganisationId(date, OrganisationContext.get());
     }
 
     public List<Attendance> listByOrg() {
-        return repo.findByOrganisationId(OrganisationContext.get());
+        return repo.findByOrganisationId(OrganisationContext.get()).stream()
+                .filter(record -> record.getAttendanceDate().getDayOfWeek() != java.time.DayOfWeek.SUNDAY)
+                .toList();
+    }
+
+    public List<Attendance> listByOrganisationAndMonth(YearMonth month) {
+        return repo.findByOrganisationIdAndAttendanceDateBetweenOrderByAttendanceDateAsc(
+            OrganisationContext.get(), month.atDay(1), month.atEndOfMonth()).stream()
+            .filter(record -> record.getAttendanceDate().getDayOfWeek() != java.time.DayOfWeek.SUNDAY)
+            .toList();
     }
 
     public List<Attendance> listPendingByOrg() {
-        return repo.findByOrganisationIdAndStatus(OrganisationContext.get(), Attendance.AttendanceStatus.PENDING);
+        return repo.findByOrganisationIdAndStatus(OrganisationContext.get(), Attendance.AttendanceStatus.PENDING).stream()
+            .filter(record -> record.getAttendanceDate().getDayOfWeek() != java.time.DayOfWeek.SUNDAY)
+            .toList();
     }
 
     public List<Attendance> listByEmployeeAndMonth(UUID employeeId, YearMonth month) {
@@ -218,14 +262,18 @@ public class AttendanceService {
                 employeeId,
                 OrganisationContext.get(),
                 start,
-                end);
+            end).stream()
+            .filter(record -> record.getAttendanceDate().getDayOfWeek() != java.time.DayOfWeek.SUNDAY)
+            .toList();
     }
 
     public List<Attendance> listByEmployeeAndStatus(UUID employeeId, Attendance.AttendanceStatus status) {
         return repo.findByEmployeeIdAndOrganisationIdAndStatusOrderByAttendanceDateDesc(
                 employeeId,
-                OrganisationContext.get(),
-                status
-        );
+            OrganisationContext.get(),
+            status
+        ).stream()
+            .filter(record -> record.getAttendanceDate().getDayOfWeek() != java.time.DayOfWeek.SUNDAY)
+            .toList();
     }
 }

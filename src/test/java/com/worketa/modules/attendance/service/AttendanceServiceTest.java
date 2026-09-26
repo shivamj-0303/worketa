@@ -92,6 +92,7 @@ class AttendanceServiceTest {
         Attendance saved = service.markAttendance(attendance);
 
         assertEquals(AttendanceStatus.PENDING, saved.getStatus());
+        assertEquals(java.math.BigDecimal.ZERO, saved.getBonusAmount());
         verify(repo).save(attendance);
     }
 
@@ -119,6 +120,18 @@ class AttendanceServiceTest {
     }
 
     @Test
+    void ensureAbsentAttendanceForEmployeeSkipsSunday() {
+        Employee employee = new Employee();
+        employee.setId(UUID.randomUUID());
+        employee.setOrganisationId(organisationId);
+
+        Attendance absent = service.ensureAbsentAttendanceForEmployee(employee, LocalDate.of(2026, 9, 6));
+
+        org.junit.jupiter.api.Assertions.assertNull(absent);
+        org.mockito.Mockito.verifyNoInteractions(repo);
+    }
+
+    @Test
     void rejectAttendanceConvertsRequestToApprovedAbsentRecord() {
         UUID attendanceId = UUID.randomUUID();
         Attendance attendance = new Attendance();
@@ -142,7 +155,7 @@ class AttendanceServiceTest {
     @Test
     void adminAttendanceCreatesApprovedAuthoritativeRecordForSelectedDate() {
         UUID employeeId = UUID.randomUUID();
-        LocalDate selectedDate = LocalDate.of(2026, 9, 6);
+        LocalDate selectedDate = LocalDate.of(2026, 9, 7);
         Attendance request = new Attendance();
         request.setEmployeeId(employeeId);
         request.setAttendanceDate(selectedDate);

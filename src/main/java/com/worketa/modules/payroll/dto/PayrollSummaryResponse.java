@@ -14,7 +14,9 @@ public class PayrollSummaryResponse {
 
     private LocalDate periodEnd;
 
-    private BigDecimal dailyWage;
+    private BigDecimal monthlySalary;
+    private BigDecimal absentDeductionPerDay;
+    private BigDecimal absenceDeduction;
 
     private int presentDays;
 
@@ -69,13 +71,18 @@ public class PayrollSummaryResponse {
         this.periodEnd = periodEnd;
     }
 
-    public BigDecimal getDailyWage() {
-        return dailyWage;
+    public BigDecimal getMonthlySalary() {
+        return monthlySalary;
     }
 
-    public void setDailyWage(BigDecimal dailyWage) {
-        this.dailyWage = dailyWage;
+    public void setMonthlySalary(BigDecimal monthlySalary) {
+        this.monthlySalary = monthlySalary;
     }
+
+    public BigDecimal getAbsentDeductionPerDay() { return absentDeductionPerDay; }
+    public void setAbsentDeductionPerDay(BigDecimal absentDeductionPerDay) { this.absentDeductionPerDay = absentDeductionPerDay; }
+    public BigDecimal getAbsenceDeduction() { return absenceDeduction; }
+    public void setAbsenceDeduction(BigDecimal absenceDeduction) { this.absenceDeduction = absenceDeduction; }
 
     public int getPresentDays() {
         return presentDays;

@@ -88,6 +88,10 @@ public class PayrollService {
         Map<LocalDate, List<Attendance>> approvedByDate = new LinkedHashMap<>();
 
         for (Attendance attendance : attendances) {
+                        if (attendance.getAttendanceDate().getDayOfWeek() == java.time.DayOfWeek.SUNDAY) {
+                                continue;
+                        }
+
                         switch (attendance.getType()) {
                                 case PRESENT -> requestedPresentDays++;
                                 case WORKED_DOUBLE -> requestedDoubledDays++;
@@ -118,13 +122,20 @@ public class PayrollService {
                 }
         }
 
-        BigDecimal dailyWage = employee.getDailyWage();
-
-        // Double attendance earns the daily wage plus a fixed 500 bonus.
-        BigDecimal bonusAmount = BigDecimal.valueOf(500L).multiply(BigDecimal.valueOf(doubledDays));
+        BigDecimal monthlySalary = employee.getMonthlySalary();
+        BigDecimal absentDeductionPerDay = employee.getAbsentDeductionPerDay();
+        BigDecimal absenceDeduction = absentDeductionPerDay.multiply(BigDecimal.valueOf(absentDays));
+        BigDecimal bonusAmount = approvedByDate.values().stream()
+                .flatMap(List::stream)
+                .filter(attendance -> attendance.getType() == Attendance.AttendanceType.WORKED_DOUBLE)
+                .map(attendance -> attendance.getBonusAmount() == null
+                        || attendance.getBonusAmount().compareTo(BigDecimal.ZERO) == 0
+                        ? BigDecimal.valueOf(500L)
+                        : attendance.getBonusAmount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal grossAmount =
-                dailyWage.multiply(BigDecimal.valueOf(presentDays))
+                monthlySalary.subtract(absenceDeduction)
                         .add(bonusAmount);
 
         List<Advance> advances =
@@ -159,7 +170,9 @@ public class PayrollService {
         response.setPeriodStart(startDate);
         response.setPeriodEnd(endDate);
 
-        response.setDailyWage(dailyWage);
+        response.setMonthlySalary(monthlySalary);
+        response.setAbsentDeductionPerDay(absentDeductionPerDay);
+        response.setAbsenceDeduction(absenceDeduction);
 
         response.setPresentDays(presentDays);
         response.setDoubledDays(doubledDays);
@@ -173,7 +186,14 @@ public class PayrollService {
         response.setAdvanceDeduction(advanceDeduction);
         response.setNetAmount(netAmount);
         response.setRequestedAdvanceAmount(requestedAdvanceAmount);
-        response.setRequestedBonusAmount(BigDecimal.valueOf(500L).multiply(BigDecimal.valueOf(requestedDoubledDays)));
+        response.setRequestedBonusAmount(attendances.stream()
+                .filter(attendance -> attendance.getStatus() != Attendance.AttendanceStatus.REJECTED
+                        && attendance.getType() == Attendance.AttendanceType.WORKED_DOUBLE)
+                .map(attendance -> attendance.getBonusAmount() == null
+                        || attendance.getBonusAmount().compareTo(BigDecimal.ZERO) == 0
+                        ? BigDecimal.valueOf(500L)
+                        : attendance.getBonusAmount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
 
         return response;
     }
@@ -195,7 +215,10 @@ public class PayrollService {
         payroll.setPeriodStart(summary.getPeriodStart());
         payroll.setPeriodEnd(summary.getPeriodEnd());
 
-        payroll.setDailyWage(summary.getDailyWage());
+        payroll.setMonthlySalary(summary.getMonthlySalary());
+        payroll.setAbsentDeductionPerDay(summary.getAbsentDeductionPerDay());
+        payroll.setAbsenceDeduction(summary.getAbsenceDeduction());
+
 
         payroll.setPresentDays(summary.getPresentDays());
         payroll.setDoubledDays(summary.getDoubledDays());
@@ -256,7 +279,7 @@ public class PayrollService {
                 payroll.setEmployeeName(request.getEmployeeName());
                 payroll.setPeriodStart(request.getPeriodStart());
                 payroll.setPeriodEnd(request.getPeriodEnd());
-                payroll.setDailyWage(request.getDailyWage());
+                payroll.setMonthlySalary(request.getMonthlySalary());
                 payroll.setPresentDays(request.getPresentDays());
                 payroll.setDoubledDays(request.getDoubledDays());
                 payroll.setAbsentDays(request.getAbsentDays());

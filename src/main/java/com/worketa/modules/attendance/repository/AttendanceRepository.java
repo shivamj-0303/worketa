@@ -24,6 +24,11 @@ public interface AttendanceRepository extends JpaRepository<Attendance, UUID> {
             Attendance.AttendanceType type
         );
     List<Attendance> findByOrganisationIdAndStatus(UUID organisationId, Attendance.AttendanceStatus status);
+    List<Attendance> findByOrganisationIdAndAttendanceDateBetweenOrderByAttendanceDateAsc(
+        UUID organisationId,
+        LocalDate start,
+        LocalDate end
+    );
     List<Attendance> findByEmployeeIdAndOrganisationIdAndStatusOrderByAttendanceDateDesc(
         UUID employeeId,
         UUID organisationId,

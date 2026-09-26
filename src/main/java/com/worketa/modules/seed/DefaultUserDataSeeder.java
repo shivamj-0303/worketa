@@ -105,7 +105,8 @@ public class DefaultUserDataSeeder implements CommandLineRunner {
         employee.setEmployeeCode(employeeCode);
         employee.setType(Employee.EmployeeType.DRIVER);
         employee.setJoiningDate(LocalDate.now().minusDays(30));
-        employee.setDailyWage(new BigDecimal("500.00"));
+        employee.setMonthlySalary(new BigDecimal("15000.00"));
+        employee.setAbsentDeductionPerDay(new BigDecimal("600.00"));
         employee.setActive(true);
         employeeRepository.save(employee);
     }

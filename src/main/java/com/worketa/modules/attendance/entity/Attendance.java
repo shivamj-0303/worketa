@@ -2,6 +2,7 @@ package com.worketa.modules.attendance.entity;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.math.BigDecimal;
 import java.util.UUID;
 
 import com.worketa.common.audit.Auditable;
@@ -41,6 +42,9 @@ public class Attendance extends Auditable {
     @Column(nullable = false)
     private AttendanceStatus status = AttendanceStatus.PENDING;
 
+    @Column(name = "bonus_amount", nullable = false, precision = 10, scale = 2)
+    private BigDecimal bonusAmount = BigDecimal.ZERO;
+
     private OffsetDateTime checkinTime;
     private OffsetDateTime checkoutTime;
 
@@ -56,6 +60,8 @@ public class Attendance extends Auditable {
     public void setType(AttendanceType type) { this.type = type; }
     public AttendanceStatus getStatus() { return status; }
     public void setStatus(AttendanceStatus status) { this.status = status; }
+    public BigDecimal getBonusAmount() { return bonusAmount; }
+    public void setBonusAmount(BigDecimal bonusAmount) { this.bonusAmount = bonusAmount; }
     public OffsetDateTime getCheckinTime() { return checkinTime; }
     public void setCheckinTime(OffsetDateTime checkinTime) { this.checkinTime = checkinTime; }
     public OffsetDateTime getCheckoutTime() { return checkoutTime; }
