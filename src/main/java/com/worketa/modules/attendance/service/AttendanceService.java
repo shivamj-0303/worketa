@@ -51,6 +51,11 @@ public class AttendanceService {
                 .anyMatch(record -> record.getType() == Attendance.AttendanceType.ABSENT)) {
             throw new ApiException("Absent attendance cannot be combined with another attendance type");
         }
+        if (attendance.getType() == Attendance.AttendanceType.WORKED_DOUBLE && records.stream()
+                .noneMatch(record -> record.getType() == Attendance.AttendanceType.PRESENT
+                        && record.getStatus() != Attendance.AttendanceStatus.REJECTED)) {
+            throw new ApiException("A present attendance request is required before requesting double attendance");
+        }
         LocalTime currentTime = WorketaClock.now().toLocalTime();
         boolean doubleWindowOpen = !currentTime.isBefore(LocalTime.of(17, 0))
             || currentTime.isBefore(LocalTime.of(2, 0));
@@ -177,6 +182,22 @@ public class AttendanceService {
     public Attendance approveAttendance(UUID id, BigDecimal bonusAmount) {
         Attendance existing = getById(id);
         if (existing.getType() == Attendance.AttendanceType.WORKED_DOUBLE) {
+            List<Attendance> sameDayRecords = repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(
+                    existing.getEmployeeId(), existing.getOrganisationId(), existing.getAttendanceDate());
+            Attendance present = sameDayRecords.stream()
+                    .filter(record -> !record.getId().equals(existing.getId()))
+                    .filter(record -> record.getType() == Attendance.AttendanceType.PRESENT)
+                    .filter(record -> record.getStatus() != Attendance.AttendanceStatus.REJECTED)
+                    .findFirst()
+                    .orElse(null);
+            if (present != null) {
+                repo.delete(existing);
+                repo.flush();
+                present.setType(Attendance.AttendanceType.WORKED_DOUBLE);
+                present.setBonusAmount(defaultBonus(bonusAmount));
+                present.setStatus(Attendance.AttendanceStatus.APPROVED);
+                return repo.save(present);
+            }
             existing.setBonusAmount(defaultBonus(bonusAmount));
         }
         existing.setStatus(Attendance.AttendanceStatus.APPROVED);
@@ -190,6 +211,18 @@ public class AttendanceService {
     @Transactional
     public Attendance rejectAttendance(UUID id) {
         Attendance existing = getById(id);
+        if (existing.getType() == Attendance.AttendanceType.WORKED_DOUBLE) {
+            List<Attendance> sameDayRecords = repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(
+                    existing.getEmployeeId(), existing.getOrganisationId(), existing.getAttendanceDate());
+            Attendance present = sameDayRecords.stream()
+                    .filter(record -> !record.getId().equals(existing.getId()))
+                    .filter(record -> record.getType() == Attendance.AttendanceType.PRESENT)
+                    .filter(record -> record.getStatus() != Attendance.AttendanceStatus.REJECTED)
+                    .findFirst()
+                    .orElseThrow(() -> new ApiException("Present attendance not found for double request"));
+            repo.delete(existing);
+            return present;
+        }
         existing.setType(Attendance.AttendanceType.ABSENT);
         existing.setStatus(Attendance.AttendanceStatus.APPROVED);
         existing.setCheckinTime(null);

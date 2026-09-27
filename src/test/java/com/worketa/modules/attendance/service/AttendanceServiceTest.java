@@ -152,6 +152,7 @@ class AttendanceServiceTest {
         verify(repo).save(attendance);
     }
 
+
     @Test
     void adminAttendanceCreatesApprovedAuthoritativeRecordForSelectedDate() {
         UUID employeeId = UUID.randomUUID();
