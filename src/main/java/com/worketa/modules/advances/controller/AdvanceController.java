@@ -74,16 +74,20 @@ public class AdvanceController {
     public ResponseEntity<ApiResponse<Advance>> updateAdvance(
             @PathVariable UUID id,
             @RequestBody Advance advance) {
-        advance.setId(id);
-        Advance updated = advanceService.create(advance);
+            Advance updated = advanceService.updatePending(id, advance);
         return ResponseEntity.ok(ApiResponse.ok("Advance updated successfully", updated));
     }
 
     @PostMapping("/{id}/approve")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Advance>> approve(@PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.ok("Advance approved successfully", advanceService.approve(id)));
+    public ResponseEntity<ApiResponse<Advance>> approve(
+            @PathVariable UUID id,
+            @RequestBody(required = false) ApprovalRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok("Advance approved successfully",
+                advanceService.approve(id, request == null ? null : request.amount())));
     }
+
+    public record ApprovalRequest(java.math.BigDecimal amount) {}
 
     @PostMapping("/{id}/reject")
     @PreAuthorize("hasRole('ADMIN')")

@@ -1,5 +1,6 @@
 package com.worketa.modules.advances.service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,9 +36,34 @@ public class AdvanceService {
     }
 
     @Transactional
-    public Advance approve(UUID id) {
+    public Advance approve(UUID id, BigDecimal adjustedAmount) {
         Advance advance = getById(id);
+        if (advance.getStatus() != Advance.AdvanceStatus.PENDING) {
+            throw new ApiException("Only pending advances can be approved or adjusted");
+        }
+        if (adjustedAmount != null) {
+            if (adjustedAmount.signum() <= 0) {
+                throw new ApiException("Advance amount must be greater than zero");
+            }
+            advance.setAmount(adjustedAmount);
+        }
         advance.setStatus(Advance.AdvanceStatus.APPROVED);
+        return repo.save(advance);
+    }
+
+    @Transactional
+    public Advance updatePending(UUID id, Advance update) {
+        Advance advance = getById(id);
+        if (advance.getStatus() != Advance.AdvanceStatus.PENDING) {
+            throw new ApiException("Only pending advances can be adjusted");
+        }
+        if (update.getAmount() == null || update.getAmount().signum() <= 0) {
+            throw new ApiException("Advance amount must be greater than zero");
+        }
+        advance.setAmount(update.getAmount());
+        if (update.getNote() != null) {
+            advance.setNote(update.getNote());
+        }
         return repo.save(advance);
     }
 
