@@ -1,12 +1,12 @@
 package com.worketa.modules.attendance.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.math.BigDecimal;
 
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -45,17 +45,28 @@ public class AttendanceService {
         }
         List<Attendance> records = repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(
                 attendance.getEmployeeId(), organisationId, attendance.getAttendanceDate());
-        if (!records.isEmpty()) {
-            Attendance existing = records.get(0);
+        Attendance sameType = records.stream()
+                .filter(record -> record.getType() == attendance.getType())
+                .findFirst()
+                .orElse(null);
+        if (sameType != null) {
             throw new ConflictException(String.format(
-                "Attendance already exists for this employee on %s as %s (%s). Only one attendance record is allowed per employee per date.",
-                attendance.getAttendanceDate(), existing.getType(), existing.getStatus()));
+                "Attendance already exists for this employee on %s as %s (%s).",
+                attendance.getAttendanceDate(), sameType.getType(), sameType.getStatus()));
         }
         LocalTime currentTime = WorketaClock.now().toLocalTime();
         boolean doubleWindowOpen = !currentTime.isBefore(LocalTime.of(17, 0))
             || currentTime.isBefore(LocalTime.of(2, 0));
         if (attendance.getType() == Attendance.AttendanceType.WORKED_DOUBLE && !doubleWindowOpen) {
             throw new ApiException("Double attendance can only be requested between 5:00 PM and 2:00 AM");
+        }
+        if (attendance.getType() == Attendance.AttendanceType.WORKED_DOUBLE) {
+            boolean presentRequested = records.stream()
+                    .anyMatch(record -> record.getType() == Attendance.AttendanceType.PRESENT
+                            && record.getStatus() != Attendance.AttendanceStatus.REJECTED);
+            if (!presentRequested) {
+                throw new ApiException("Present attendance must be requested before double attendance");
+            }
         }
         attendance.setStatus(Attendance.AttendanceStatus.PENDING);
         attendance.setBonusAmount(BigDecimal.ZERO);
@@ -77,7 +88,33 @@ public class AttendanceService {
         List<Attendance> records = repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(
             attendance.getEmployeeId(), organisationId, attendance.getAttendanceDate());
 
-        Attendance authoritative = records.isEmpty() ? new Attendance() : records.get(0);
+        if (attendance.getType() == Attendance.AttendanceType.WORKED_DOUBLE) {
+            Attendance present = records.stream()
+                .filter(record -> record.getType() == Attendance.AttendanceType.PRESENT)
+                .filter(record -> record.getStatus() == Attendance.AttendanceStatus.APPROVED)
+                .findFirst()
+                .orElseThrow(() -> new ApiException(
+                    "Present attendance must be approved before double attendance"));
+            Attendance existingDouble = records.stream()
+                .filter(record -> record.getType() == Attendance.AttendanceType.WORKED_DOUBLE)
+                .findFirst()
+                .orElse(null);
+            Attendance doubleAttendance = existingDouble == null ? new Attendance() : existingDouble;
+            doubleAttendance.setOrganisationId(organisationId);
+            doubleAttendance.setEmployeeId(attendance.getEmployeeId());
+            doubleAttendance.setAttendanceDate(attendance.getAttendanceDate());
+            doubleAttendance.setType(Attendance.AttendanceType.WORKED_DOUBLE);
+            doubleAttendance.setStatus(Attendance.AttendanceStatus.APPROVED);
+            doubleAttendance.setBonusAmount(defaultBonus(attendance.getBonusAmount()));
+            doubleAttendance.setCheckinTime(attendance.getCheckinTime());
+            doubleAttendance.setCheckoutTime(attendance.getCheckoutTime());
+            return repo.save(doubleAttendance);
+        }
+
+        Attendance authoritative = records.stream()
+            .filter(record -> record.getType() == attendance.getType())
+            .findFirst()
+            .orElseGet(Attendance::new);
         authoritative.setOrganisationId(organisationId);
         authoritative.setEmployeeId(attendance.getEmployeeId());
         authoritative.setAttendanceDate(attendance.getAttendanceDate());
@@ -87,12 +124,6 @@ public class AttendanceService {
             ? defaultBonus(attendance.getBonusAmount()) : BigDecimal.ZERO);
         authoritative.setCheckinTime(attendance.getCheckinTime());
         authoritative.setCheckoutTime(attendance.getCheckoutTime());
-
-        if (records.size() > 1) {
-            repo.deleteAll(records.stream()
-                    .filter(record -> !record.getId().equals(authoritative.getId()))
-                    .toList());
-        }
 
         return repo.save(authoritative);
     }
@@ -180,20 +211,20 @@ public class AttendanceService {
             List<Attendance> sameDayRecords = repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(
                     existing.getEmployeeId(), existing.getOrganisationId(), existing.getAttendanceDate());
             Attendance present = sameDayRecords.stream()
-                    .filter(record -> !record.getId().equals(existing.getId()))
+                    .filter(record -> !java.util.Objects.equals(record.getId(), existing.getId()))
                     .filter(record -> record.getType() == Attendance.AttendanceType.PRESENT)
-                    .filter(record -> record.getStatus() != Attendance.AttendanceStatus.REJECTED)
+                    .filter(record -> record.getStatus() == Attendance.AttendanceStatus.APPROVED)
                     .findFirst()
                     .orElse(null);
-            if (present != null) {
-                repo.delete(existing);
-                repo.flush();
-                present.setType(Attendance.AttendanceType.WORKED_DOUBLE);
-                present.setBonusAmount(defaultBonus(bonusAmount));
-                present.setStatus(Attendance.AttendanceStatus.APPROVED);
-                return repo.save(present);
+            if (present == null) {
+                throw new ApiException("Present attendance must be approved before double attendance");
             }
-            existing.setBonusAmount(defaultBonus(bonusAmount));
+            repo.delete(existing);
+            repo.flush();
+            present.setType(Attendance.AttendanceType.WORKED_DOUBLE);
+            present.setBonusAmount(defaultBonus(bonusAmount));
+            present.setStatus(Attendance.AttendanceStatus.APPROVED);
+            return repo.save(present);
         }
         existing.setStatus(Attendance.AttendanceStatus.APPROVED);
         return repo.save(existing);
@@ -210,14 +241,23 @@ public class AttendanceService {
             List<Attendance> sameDayRecords = repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(
                     existing.getEmployeeId(), existing.getOrganisationId(), existing.getAttendanceDate());
             Attendance present = sameDayRecords.stream()
-                    .filter(record -> !record.getId().equals(existing.getId()))
+                    .filter(record -> !java.util.Objects.equals(record.getId(), existing.getId()))
                     .filter(record -> record.getType() == Attendance.AttendanceType.PRESENT)
-                    .filter(record -> record.getStatus() != Attendance.AttendanceStatus.REJECTED)
+                    .filter(record -> record.getStatus() == Attendance.AttendanceStatus.APPROVED)
                     .findFirst()
-                    .orElseThrow(() -> new ApiException("Present attendance not found for double request"));
+                    .orElse(null);
             repo.delete(existing);
-            return present;
+            if (present != null) {
+                return present;
+            }
+            return existing;
         }
+        List<Attendance> sameDayRecords = repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(
+                existing.getEmployeeId(), existing.getOrganisationId(), existing.getAttendanceDate());
+        sameDayRecords.stream()
+                .filter(record -> record.getType() == Attendance.AttendanceType.WORKED_DOUBLE)
+                .filter(record -> record.getStatus() == Attendance.AttendanceStatus.PENDING)
+                .forEach(repo::delete);
         existing.setType(Attendance.AttendanceType.ABSENT);
         existing.setStatus(Attendance.AttendanceStatus.APPROVED);
         existing.setCheckinTime(null);

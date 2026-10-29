@@ -62,46 +62,45 @@ class AttendanceServiceTest {
     }
 
     @Test
-    void markAttendanceRejectsAnySecondTypeForTheSameDate() {
+    void markAttendanceAllowsDoubleAfterPresentRequest() {
         Attendance attendance = new Attendance();
         attendance.setEmployeeId(UUID.randomUUID());
-        attendance.setType(Attendance.AttendanceType.ABSENT);
+        attendance.setType(Attendance.AttendanceType.WORKED_DOUBLE);
 
         Attendance existing = new Attendance();
         existing.setType(Attendance.AttendanceType.PRESENT);
+        existing.setStatus(AttendanceStatus.PENDING);
         when(repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(any(), any(), any()))
                 .thenReturn(List.of(existing));
+        when(repo.save(any(Attendance.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-            com.worketa.common.exception.ConflictException.class,
-                () -> service.markAttendance(attendance));
+        Attendance saved = service.markAttendance(attendance);
+
+        assertEquals(Attendance.AttendanceType.WORKED_DOUBLE, saved.getType());
+        assertEquals(AttendanceStatus.PENDING, saved.getStatus());
     }
 
     @Test
-    void markAttendanceAllowsDirectDoubleRequestWhenNoRecordExists() {
+    void markAttendanceRejectsDirectDoubleRequestWithoutPresent() {
         Attendance attendance = new Attendance();
         attendance.setEmployeeId(UUID.randomUUID());
         attendance.setType(Attendance.AttendanceType.WORKED_DOUBLE);
 
         when(repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(any(), any(), any()))
                 .thenReturn(List.of());
-        when(repo.save(any(Attendance.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        Attendance saved = service.markAttendance(attendance);
-
-        assertEquals(AttendanceStatus.PENDING, saved.getStatus());
-        assertEquals(java.math.BigDecimal.ZERO, saved.getBonusAmount());
-        verify(repo).save(attendance);
+        org.junit.jupiter.api.Assertions.assertThrows(
+            com.worketa.common.exception.ApiException.class,
+            () -> service.markAttendance(attendance));
     }
 
     @Test
-    void markAttendanceRejectsAnySecondRecordForSameEmployeeAndDate() {
+    void markAttendanceRejectsDuplicateDoubleRequestForSameEmployeeAndDate() {
         Attendance attendance = new Attendance();
         attendance.setEmployeeId(UUID.randomUUID());
         attendance.setType(Attendance.AttendanceType.WORKED_DOUBLE);
 
         Attendance existing = new Attendance();
-        existing.setType(Attendance.AttendanceType.PRESENT);
+        existing.setType(Attendance.AttendanceType.WORKED_DOUBLE);
         existing.setStatus(AttendanceStatus.PENDING);
         when(repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(any(), any(), any()))
                 .thenReturn(List.of(existing));
@@ -188,5 +187,95 @@ class AttendanceServiceTest {
         assertEquals(Attendance.AttendanceType.PRESENT, saved.getType());
         assertEquals(AttendanceStatus.APPROVED, saved.getStatus());
         verify(repo).save(any(Attendance.class));
+    }
+
+    @Test
+    void approveDoubleRequiresApprovedPresentAndConvertsPresentToDouble() {
+        UUID doubleId = UUID.randomUUID();
+        UUID presentId = UUID.randomUUID();
+        UUID employeeId = UUID.randomUUID();
+        LocalDate date = LocalDate.of(2026, 9, 7);
+
+        Attendance doubleRequest = new Attendance();
+        doubleRequest.setId(doubleId);
+        doubleRequest.setOrganisationId(organisationId);
+        doubleRequest.setEmployeeId(employeeId);
+        doubleRequest.setAttendanceDate(date);
+        doubleRequest.setType(Attendance.AttendanceType.WORKED_DOUBLE);
+        doubleRequest.setStatus(AttendanceStatus.PENDING);
+
+        Attendance present = new Attendance();
+        present.setId(presentId);
+        present.setOrganisationId(organisationId);
+        present.setEmployeeId(employeeId);
+        present.setAttendanceDate(date);
+        present.setType(Attendance.AttendanceType.PRESENT);
+        present.setStatus(AttendanceStatus.APPROVED);
+
+        when(repo.findById(doubleId)).thenReturn(java.util.Optional.of(doubleRequest));
+        when(repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(employeeId, organisationId, date))
+                .thenReturn(List.of(present, doubleRequest));
+        when(repo.save(any(Attendance.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Attendance saved = service.approveAttendance(doubleId, null);
+
+        assertEquals(Attendance.AttendanceType.WORKED_DOUBLE, saved.getType());
+        assertEquals(AttendanceStatus.APPROVED, saved.getStatus());
+        verify(repo).delete(doubleRequest);
+        verify(repo).flush();
+    }
+
+    @Test
+    void approveDoubleRejectsWhenPresentIsNotApproved() {
+        UUID doubleId = UUID.randomUUID();
+        UUID employeeId = UUID.randomUUID();
+        LocalDate date = LocalDate.of(2026, 9, 7);
+
+        Attendance doubleRequest = new Attendance();
+        doubleRequest.setId(doubleId);
+        doubleRequest.setOrganisationId(organisationId);
+        doubleRequest.setEmployeeId(employeeId);
+        doubleRequest.setAttendanceDate(date);
+        doubleRequest.setType(Attendance.AttendanceType.WORKED_DOUBLE);
+
+        Attendance present = new Attendance();
+        present.setType(Attendance.AttendanceType.PRESENT);
+        present.setStatus(AttendanceStatus.PENDING);
+
+        when(repo.findById(doubleId)).thenReturn(java.util.Optional.of(doubleRequest));
+        when(repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(employeeId, organisationId, date))
+                .thenReturn(List.of(present, doubleRequest));
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.worketa.common.exception.ApiException.class,
+                () -> service.approveAttendance(doubleId, null));
+    }
+
+    @Test
+    void rejectDoubleKeepsApprovedPresent() {
+        UUID doubleId = UUID.randomUUID();
+        UUID employeeId = UUID.randomUUID();
+        LocalDate date = LocalDate.of(2026, 9, 7);
+
+        Attendance doubleRequest = new Attendance();
+        doubleRequest.setId(doubleId);
+        doubleRequest.setOrganisationId(organisationId);
+        doubleRequest.setEmployeeId(employeeId);
+        doubleRequest.setAttendanceDate(date);
+        doubleRequest.setType(Attendance.AttendanceType.WORKED_DOUBLE);
+
+        Attendance present = new Attendance();
+        present.setType(Attendance.AttendanceType.PRESENT);
+        present.setStatus(AttendanceStatus.APPROVED);
+
+        when(repo.findById(doubleId)).thenReturn(java.util.Optional.of(doubleRequest));
+        when(repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(employeeId, organisationId, date))
+                .thenReturn(List.of(present, doubleRequest));
+
+        Attendance saved = service.rejectAttendance(doubleId);
+
+        assertEquals(Attendance.AttendanceType.PRESENT, saved.getType());
+        assertEquals(AttendanceStatus.APPROVED, saved.getStatus());
+        verify(repo).delete(doubleRequest);
     }
 }
