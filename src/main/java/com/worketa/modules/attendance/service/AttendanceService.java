@@ -99,22 +99,26 @@ public class AttendanceService {
                 .filter(record -> record.getType() == Attendance.AttendanceType.WORKED_DOUBLE)
                 .findFirst()
                 .orElse(null);
-            Attendance doubleAttendance = existingDouble == null ? new Attendance() : existingDouble;
-            doubleAttendance.setOrganisationId(organisationId);
-            doubleAttendance.setEmployeeId(attendance.getEmployeeId());
-            doubleAttendance.setAttendanceDate(attendance.getAttendanceDate());
-            doubleAttendance.setType(Attendance.AttendanceType.WORKED_DOUBLE);
-            doubleAttendance.setStatus(Attendance.AttendanceStatus.APPROVED);
-            doubleAttendance.setBonusAmount(defaultBonus(attendance.getBonusAmount()));
-            doubleAttendance.setCheckinTime(attendance.getCheckinTime());
-            doubleAttendance.setCheckoutTime(attendance.getCheckoutTime());
-            return repo.save(doubleAttendance);
+            if (existingDouble != null) {
+                repo.delete(existingDouble);
+                repo.flush();
+            }
+            present.setType(Attendance.AttendanceType.WORKED_DOUBLE);
+            present.setStatus(Attendance.AttendanceStatus.APPROVED);
+            present.setBonusAmount(defaultBonus(attendance.getBonusAmount()));
+            present.setCheckinTime(attendance.getCheckinTime());
+            present.setCheckoutTime(attendance.getCheckoutTime());
+            return repo.save(present);
         }
 
         Attendance authoritative = records.stream()
             .filter(record -> record.getType() == attendance.getType())
             .findFirst()
             .orElseGet(Attendance::new);
+        records.stream()
+            .filter(record -> !java.util.Objects.equals(record.getId(), authoritative.getId()))
+            .forEach(repo::delete);
+        repo.flush();
         authoritative.setOrganisationId(organisationId);
         authoritative.setEmployeeId(attendance.getEmployeeId());
         authoritative.setAttendanceDate(attendance.getAttendanceDate());
