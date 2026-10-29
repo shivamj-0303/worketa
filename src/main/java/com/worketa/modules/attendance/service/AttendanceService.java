@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.worketa.common.exception.ApiException;
+import com.worketa.common.exception.ConflictException;
 import com.worketa.common.security.OrganisationContext;
 import com.worketa.common.time.WorketaClock;
 import com.worketa.modules.attendance.entity.Attendance;
@@ -44,17 +45,11 @@ public class AttendanceService {
         }
         List<Attendance> records = repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(
                 attendance.getEmployeeId(), organisationId, attendance.getAttendanceDate());
-        if (records.stream().anyMatch(record -> record.getType() == attendance.getType())) {
-            throw new ApiException("This attendance type has already been submitted for this date");
-        }
-        if (attendance.getType() == Attendance.AttendanceType.ABSENT || records.stream()
-                .anyMatch(record -> record.getType() == Attendance.AttendanceType.ABSENT)) {
-            throw new ApiException("Absent attendance cannot be combined with another attendance type");
-        }
-        if (attendance.getType() == Attendance.AttendanceType.WORKED_DOUBLE && records.stream()
-                .noneMatch(record -> record.getType() == Attendance.AttendanceType.PRESENT
-                        && record.getStatus() != Attendance.AttendanceStatus.REJECTED)) {
-            throw new ApiException("A present attendance request is required before requesting double attendance");
+        if (!records.isEmpty()) {
+            Attendance existing = records.get(0);
+            throw new ConflictException(String.format(
+                "Attendance already exists for this employee on %s as %s (%s). Only one attendance record is allowed per employee per date.",
+                attendance.getAttendanceDate(), existing.getType(), existing.getStatus()));
         }
         LocalTime currentTime = WorketaClock.now().toLocalTime();
         boolean doubleWindowOpen = !currentTime.isBefore(LocalTime.of(17, 0))
@@ -235,6 +230,9 @@ public class AttendanceService {
         Attendance existing = getById(id);
         if (existing.getStatus() != Attendance.AttendanceStatus.PENDING) {
             throw new ApiException("Only pending attendance requests can be changed");
+        }
+        if (attendance.getType() == null) {
+            throw new ApiException("Attendance type is required");
         }
         existing.setType(attendance.getType());
         existing.setStatus(Attendance.AttendanceStatus.PENDING);

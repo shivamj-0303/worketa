@@ -62,7 +62,7 @@ class AttendanceServiceTest {
     }
 
     @Test
-    void markAttendanceRejectsAbsentWhenAnotherTypeExists() {
+    void markAttendanceRejectsAnySecondTypeForTheSameDate() {
         Attendance attendance = new Attendance();
         attendance.setEmployeeId(UUID.randomUUID());
         attendance.setType(Attendance.AttendanceType.ABSENT);
@@ -73,20 +73,18 @@ class AttendanceServiceTest {
                 .thenReturn(List.of(existing));
 
         org.junit.jupiter.api.Assertions.assertThrows(
-                com.worketa.common.exception.ApiException.class,
+            com.worketa.common.exception.ConflictException.class,
                 () -> service.markAttendance(attendance));
     }
 
     @Test
-    void markAttendanceAllowsDoubleAfterPresentForSameDate() {
+    void markAttendanceAllowsDirectDoubleRequestWhenNoRecordExists() {
         Attendance attendance = new Attendance();
         attendance.setEmployeeId(UUID.randomUUID());
         attendance.setType(Attendance.AttendanceType.WORKED_DOUBLE);
 
-        Attendance existing = new Attendance();
-        existing.setType(Attendance.AttendanceType.PRESENT);
         when(repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(any(), any(), any()))
-                .thenReturn(List.of(existing));
+                .thenReturn(List.of());
         when(repo.save(any(Attendance.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Attendance saved = service.markAttendance(attendance);
@@ -94,6 +92,23 @@ class AttendanceServiceTest {
         assertEquals(AttendanceStatus.PENDING, saved.getStatus());
         assertEquals(java.math.BigDecimal.ZERO, saved.getBonusAmount());
         verify(repo).save(attendance);
+    }
+
+    @Test
+    void markAttendanceRejectsAnySecondRecordForSameEmployeeAndDate() {
+        Attendance attendance = new Attendance();
+        attendance.setEmployeeId(UUID.randomUUID());
+        attendance.setType(Attendance.AttendanceType.WORKED_DOUBLE);
+
+        Attendance existing = new Attendance();
+        existing.setType(Attendance.AttendanceType.PRESENT);
+        existing.setStatus(AttendanceStatus.PENDING);
+        when(repo.findByEmployeeIdAndOrganisationIdAndAttendanceDate(any(), any(), any()))
+                .thenReturn(List.of(existing));
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.worketa.common.exception.ConflictException.class,
+                () -> service.markAttendance(attendance));
     }
 
     @Test
