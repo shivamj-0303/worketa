@@ -58,19 +58,11 @@ public class PayrollService {
                         OrganisationContext.get())
                 .orElseThrow(() -> new ApiException("Employee not found"));
 
-        var latestPayroll =
-            payrollRepository
-                    .findTopByEmployeeIdAndOrganisationIdOrderByPeriodEndDesc(
-                            employeeId,
-                            OrganisationContext.get()
-                    );
-
-        LocalDate startDate =
-                latestPayroll.isPresent()
-                        ? latestPayroll.get().getPeriodEnd().plusDays(1)
-                        : employee.getJoiningDate();
-
         LocalDate endDate = WorketaClock.businessDate();
+        LocalDate monthStart = endDate.withDayOfMonth(1);
+        LocalDate startDate = employee.getJoiningDate().isAfter(monthStart)
+                ? employee.getJoiningDate()
+                : monthStart;
 
         List<Attendance> attendances =
                                 attendanceRepository.findByEmployeeIdAndOrganisationIdAndAttendanceDateBetweenOrderByAttendanceDateAsc(

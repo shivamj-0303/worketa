@@ -22,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.worketa.common.security.OrganisationContext;
+import com.worketa.common.time.WorketaClock;
 import com.worketa.modules.advances.entity.Advance;
 import com.worketa.modules.advances.repository.AdvanceRepository;
 import com.worketa.modules.attendance.entity.Attendance;
@@ -100,6 +101,25 @@ class PayrollServiceTest {
         assertEquals(String.format("%04d-%02d", LocalDate.now().getYear(), LocalDate.now().getMonthValue()), payrollCaptor.getValue().getMonth());
         verify(advanceRepository).saveAll(anyList());
     }
+
+        @Test
+        void payrollPeriodStartsAtCurrentBusinessMonthStart() {
+        when(employeeRepository.findByIdAndOrganisationId(employeeId, organisationId))
+            .thenReturn(Optional.of(employee));
+        employee.setJoiningDate(LocalDate.of(2020, 1, 1));
+        when(attendanceRepository.findByEmployeeIdAndOrganisationIdAndAttendanceDateBetweenOrderByAttendanceDateAsc(any(), any(), any(), any()))
+            .thenReturn(List.of());
+        when(advanceRepository.findByEmployeeIdAndOrganisationIdAndStatusAndSettledFalseAndAdvanceDateBetween(any(), any(), any(), any(), any()))
+            .thenReturn(List.of());
+        when(advanceRepository.findByEmployeeIdAndOrganisationIdAndSettledFalseAndAdvanceDateBetween(any(), any(), any(), any()))
+            .thenReturn(List.of());
+
+        var summary = service.getPayrollSummary(employeeId);
+        LocalDate businessDate = WorketaClock.businessDate();
+
+        assertEquals(businessDate.withDayOfMonth(1), summary.getPeriodStart());
+        assertEquals(businessDate, summary.getPeriodEnd());
+        }
 
         @Test
         void absentDaysAreDeductedFromMonthlySalary() {
