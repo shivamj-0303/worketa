@@ -3,6 +3,7 @@ package com.worketa.modules.payroll.service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,11 +59,9 @@ public class PayrollService {
                         OrganisationContext.get())
                 .orElseThrow(() -> new ApiException("Employee not found"));
 
-        LocalDate endDate = WorketaClock.businessDate();
-        LocalDate monthStart = endDate.withDayOfMonth(1);
-        LocalDate startDate = employee.getJoiningDate().isAfter(monthStart)
-                ? employee.getJoiningDate()
-                : monthStart;
+        YearMonth payrollMonth = payrollMonthFor(WorketaClock.businessDate());
+        LocalDate startDate = payrollMonth.atDay(1);
+        LocalDate endDate = payrollMonth.atEndOfMonth();
 
         List<Attendance> attendances =
                                 attendanceRepository.findByEmployeeIdAndOrganisationIdAndAttendanceDateBetweenOrderByAttendanceDateAsc(
@@ -189,6 +188,13 @@ public class PayrollService {
 
         return response;
     }
+
+        YearMonth payrollMonthFor(LocalDate calculationDate) {
+                YearMonth calculationMonth = YearMonth.from(calculationDate);
+                return calculationDate.getDayOfMonth() <= 5
+                                ? calculationMonth.minusMonths(1)
+                                : calculationMonth;
+        }
 
     @Transactional
     public Payroll settlePayroll(UUID employeeId) {

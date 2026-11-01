@@ -1,7 +1,10 @@
 package com.worketa.modules.payroll.service;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -90,7 +93,8 @@ class PayrollServiceTest {
 
         assertNotNull(payroll);
         assertEquals("Test Employee", payroll.getEmployeeName());
-        assertEquals(String.format("%04d-%02d", LocalDate.now().getYear(), LocalDate.now().getMonthValue()), payroll.getMonth());
+        LocalDate expectedPayrollDate = WorketaClock.businessDate().minusMonths(1);
+        assertEquals(String.format("%04d-%02d", expectedPayrollDate.getYear(), expectedPayrollDate.getMonthValue()), payroll.getMonth());
             // Same date: monthly salary plus the default double-attendance bonus.
             assertEquals(new BigDecimal("15500.00"), payroll.getBaseSalary());
             assertEquals(new BigDecimal("15500.00"), payroll.getGrossAmount());
@@ -98,15 +102,16 @@ class PayrollServiceTest {
         ArgumentCaptor<Payroll> payrollCaptor = ArgumentCaptor.forClass(Payroll.class);
         verify(payrollRepository).save(payrollCaptor.capture());
         assertEquals("Test Employee", payrollCaptor.getValue().getEmployeeName());
-        assertEquals(String.format("%04d-%02d", LocalDate.now().getYear(), LocalDate.now().getMonthValue()), payrollCaptor.getValue().getMonth());
+        assertEquals(String.format("%04d-%02d", expectedPayrollDate.getYear(), expectedPayrollDate.getMonthValue()), payrollCaptor.getValue().getMonth());
         verify(advanceRepository).saveAll(anyList());
     }
 
         @Test
-        void payrollPeriodStartsAtCurrentBusinessMonthStart() {
+        void payrollPeriodUsesThePreviousCalendarMonthInFull() {
         when(employeeRepository.findByIdAndOrganisationId(employeeId, organisationId))
             .thenReturn(Optional.of(employee));
-        employee.setJoiningDate(LocalDate.of(2020, 1, 1));
+            LocalDate businessDate = WorketaClock.businessDate();
+            employee.setJoiningDate(businessDate.minusDays(7));
         when(attendanceRepository.findByEmployeeIdAndOrganisationIdAndAttendanceDateBetweenOrderByAttendanceDateAsc(any(), any(), any(), any()))
             .thenReturn(List.of());
         when(advanceRepository.findByEmployeeIdAndOrganisationIdAndStatusAndSettledFalseAndAdvanceDateBetween(any(), any(), any(), any(), any()))
@@ -115,11 +120,22 @@ class PayrollServiceTest {
             .thenReturn(List.of());
 
         var summary = service.getPayrollSummary(employeeId);
-        LocalDate businessDate = WorketaClock.businessDate();
+    LocalDate expectedStart = businessDate.minusMonths(1).withDayOfMonth(1);
+    LocalDate expectedEnd = expectedStart.withDayOfMonth(expectedStart.lengthOfMonth());
 
-        assertEquals(businessDate.withDayOfMonth(1), summary.getPeriodStart());
-        assertEquals(businessDate, summary.getPeriodEnd());
+    assertEquals(expectedStart, summary.getPeriodStart());
+    assertEquals(expectedEnd, summary.getPeriodEnd());
         }
+
+    @Test
+    void payrollCycleUsesTheMonthContainingTheTwentyFifth() {
+    assertEquals(
+        YearMonth.of(2025, 12),
+        service.payrollMonthFor(LocalDate.of(2026, 1, 4)));
+    assertEquals(
+        YearMonth.of(2026, 1),
+        service.payrollMonthFor(LocalDate.of(2026, 1, 25)));
+    }
 
         @Test
         void absentDaysAreDeductedFromMonthlySalary() {
@@ -137,7 +153,7 @@ class PayrollServiceTest {
 
         assertEquals(new BigDecimal("600.00"), summary.getAbsenceDeduction());
         assertEquals(new BigDecimal("14400.00"), summary.getGrossAmount());
-        }
+            }
 
         @Test
         void pendingDoubleAttendanceDoesNotAddBonusToPayroll() {
@@ -165,7 +181,10 @@ class PayrollServiceTest {
         when(employeeRepository.findByIdAndOrganisationId(employeeId, organisationId))
             .thenReturn(Optional.of(employee));
         Attendance sundayAbsent = createAttendance(AttendanceType.ABSENT);
-        sundayAbsent.setAttendanceDate(LocalDate.of(2026, 9, 6));
+        sundayAbsent.setAttendanceDate(WorketaClock.businessDate()
+            .minusMonths(1)
+            .withDayOfMonth(1)
+            .with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY)));
         when(attendanceRepository.findByEmployeeIdAndOrganisationIdAndAttendanceDateBetweenOrderByAttendanceDateAsc(any(), any(), any(), any()))
             .thenReturn(List.of(sundayAbsent));
         when(advanceRepository.findByEmployeeIdAndOrganisationIdAndStatusAndSettledFalseAndAdvanceDateBetween(any(), any(), any(), any(), any()))
@@ -183,7 +202,7 @@ class PayrollServiceTest {
     private Attendance createAttendance(AttendanceType type) {
         Attendance attendance = new Attendance();
         attendance.setEmployeeId(employeeId);
-        attendance.setAttendanceDate(LocalDate.now());
+        attendance.setAttendanceDate(WorketaClock.businessDate().minusMonths(1));
         attendance.setType(type);
             attendance.setStatus(Attendance.AttendanceStatus.APPROVED);
         return attendance;
@@ -194,7 +213,7 @@ class PayrollServiceTest {
         advance.setId(UUID.randomUUID());
         advance.setEmployeeId(employeeId);
         advance.setAmount(new BigDecimal("250.00"));
-        advance.setAdvanceDate(LocalDate.now());
+        advance.setAdvanceDate(WorketaClock.businessDate().minusMonths(1));
         return advance;
     }
 }
